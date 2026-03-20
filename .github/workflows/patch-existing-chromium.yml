@@ -90,16 +90,16 @@ jobs:
         cd chromium
         
         # Tạo launcher script
-        cat > launch.sh << 'EOF'
-#!/bin/bash
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-"$DIR/chrome" \
-  --disable-background-networking \
-  --disable-sync \
-  --disable-translate \
-  --no-first-run \
-  "$@"
-EOF
+        cat > launch.sh << 'EOFSCRIPT'
+        #!/bin/bash
+        DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+        "$DIR/chrome" \
+          --disable-background-networking \
+          --disable-sync \
+          --disable-translate \
+          --no-first-run \
+          "$@"
+        EOFSCRIPT
         chmod +x launch.sh
         
         # Package
@@ -108,7 +108,7 @@ EOF
         
     - name: Create build info
       run: |
-        cat > BUILD_INFO.md << EOF
+        cat > BUILD_INFO.md << 'EOFINFO'
         # Custom Chromium Build
         
         **Patch Type**: ${{ inputs.patch_type }}
@@ -118,11 +118,11 @@ EOF
         
         ## Cách sử dụng:
         
-        \`\`\`bash
+        ```bash
         tar -xzf custom-chromium-patched.tar.gz
         cd chromium
         ./launch.sh
-        \`\`\`
+        ```
         
         ## Patches đã áp dụng:
         - ${{ inputs.patch_type }}
@@ -131,7 +131,7 @@ EOF
         - Đã loại bỏ Google services
         - Privacy-focused
         - Custom branding
-        EOF
+        EOFINFO
         
     - name: Upload patched build
       uses: actions/upload-artifact@v4
