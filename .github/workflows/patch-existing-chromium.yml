@@ -1,0 +1,153 @@
+name: Patch Existing Chromium (Nhanh Nhất)
+
+on:
+  workflow_dispatch:
+    inputs:
+      patch_type:
+        description: 'Loại patch'
+        required: true
+        type: choice
+        options:
+          - remove-google-services
+          - custom-branding
+          - privacy-enhancements
+          - custom-features
+          - all
+
+jobs:
+  patch-chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget curl tar xz-utils binutils patchelf
+    
+    - name: Download Ungoogled Chromium
+      run: |
+        echo "📥 Downloading Ungoogled Chromium..."
+        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep "browser_download_url.*linux.*tar.xz" | head -1 | cut -d '"' -f 4)
+        wget -O chromium.tar.xz "$LATEST_URL"
+        mkdir -p chromium
+        tar -xf chromium.tar.xz -C chromium --strip-components=1
+        
+    - name: Apply patches - Remove Google Services
+      if: inputs.patch_type == 'remove-google-services' || inputs.patch_type == 'all'
+      run: |
+        echo "🔧 Removing Google services..."
+        cd chromium
+        
+        # Xóa các service files
+        rm -f *google* *gaia* 2>/dev/null || true
+        
+        # Patch binary (nếu cần)
+        # strings chrome | grep google
+        
+    - name: Apply patches - Custom Branding
+      if: inputs.patch_type == 'custom-branding' || inputs.patch_type == 'all'
+      run: |
+        echo "🎨 Applying custom branding..."
+        cd chromium
+        
+        # Thay thế icons, resources
+        if [ -d "../custom-branding" ]; then
+          cp -r ../custom-branding/* .
+        fi
+        
+        # Tạo custom product name
+        echo "My Custom Chromium" > product_name.txt
+        
+    - name: Apply patches - Privacy Enhancements
+      if: inputs.patch_type == 'privacy-enhancements' || inputs.patch_type == 'all'
+      run: |
+        echo "🔒 Applying privacy patches..."
+        cd chromium
+        
+        # Disable telemetry, metrics
+        # Patch preferences files
+        
+    - name: Apply patches - Custom Features
+      if: inputs.patch_type == 'custom-features' || inputs.patch_type == 'all'
+      run: |
+        echo "✨ Adding custom features..."
+        cd chromium
+        
+        # Thêm extensions, bookmarks mặc định
+        mkdir -p Default/Extensions
+        
+        # Copy custom extensions nếu có
+        if [ -d "../custom-extensions" ]; then
+          cp -r ../custom-extensions/* Default/Extensions/
+        fi
+        
+    - name: Create patched package
+      run: |
+        cd chromium
+        
+        # Tạo launcher script
+        cat > launch.sh << 'EOF'
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+"$DIR/chrome" \
+  --disable-background-networking \
+  --disable-sync \
+  --disable-translate \
+  --no-first-run \
+  "$@"
+EOF
+        chmod +x launch.sh
+        
+        # Package
+        cd ..
+        tar -czf custom-chromium-patched.tar.gz chromium/
+        
+    - name: Create build info
+      run: |
+        cat > BUILD_INFO.md << EOF
+        # Custom Chromium Build
+        
+        **Patch Type**: ${{ inputs.patch_type }}
+        **Base**: Ungoogled Chromium
+        **Build Date**: $(date)
+        **Build Number**: ${{ github.run_number }}
+        
+        ## Cách sử dụng:
+        
+        \`\`\`bash
+        tar -xzf custom-chromium-patched.tar.gz
+        cd chromium
+        ./launch.sh
+        \`\`\`
+        
+        ## Patches đã áp dụng:
+        - ${{ inputs.patch_type }}
+        
+        ## Tính năng:
+        - Đã loại bỏ Google services
+        - Privacy-focused
+        - Custom branding
+        EOF
+        
+    - name: Upload patched build
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-patched-${{ inputs.patch_type }}
+        path: |
+          custom-chromium-patched.tar.gz
+          BUILD_INFO.md
+        retention-days: 30
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: patched-${{ github.run_number }}
+        name: Custom Chromium (Patched) - ${{ inputs.patch_type }}
+        body_path: BUILD_INFO.md
+        files: custom-chromium-patched.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

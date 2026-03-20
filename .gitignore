@@ -1,0 +1,34 @@
+# Chromium build artifacts
+chromium/
+chromium-base/
+chromium-prebuilt/
+*.tar.gz
+*.tar.xz
+*.zip
+*.deb
+
+# Build outputs
+out/
+Release/
+Debug/
+
+# Depot tools
+depot_tools/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.tmp

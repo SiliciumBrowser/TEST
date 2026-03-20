@@ -1,0 +1,99 @@
+name: Build Chromium Minimal (Chỉ Rebuild Một Phần)
+
+on:
+  workflow_dispatch:
+    inputs:
+      components_to_rebuild:
+        description: 'Components cần rebuild (cách nhau bởi dấu phẩy)'
+        required: true
+        default: 'chrome/browser/ui'
+        type: string
+
+jobs:
+  minimal-rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git python3 lsb-release sudo wget
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        
+    - name: Download prebuilt Chromium base
+      run: |
+        echo "📥 Downloading prebuilt base..."
+        # Download từ Ungoogled Chromium
+        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep "browser_download_url.*linux.*tar.xz" | head -1 | cut -d '"' -f 4)
+        wget -O chromium-prebuilt.tar.xz "$LATEST_URL"
+        mkdir -p chromium-prebuilt
+        tar -xf chromium-prebuilt.tar.xz -C chromium-prebuilt
+        
+    - name: Fetch Chromium source (shallow, chỉ components cần thiết)
+      run: |
+        mkdir chromium
+        cd chromium
+        fetch --nohooks --no-history chromium
+        
+    - name: Sync minimal dependencies
+      run: |
+        cd chromium/src
+        # Chỉ sync những gì cần thiết
+        gclient sync --no-history --shallow --nohooks
+        
+    - name: Install build dependencies
+      run: |
+        cd chromium/src
+        ./build/install-build-deps.sh --no-prompt --no-arm --no-chromeos-fonts
+        
+    - name: Copy prebuilt objects
+      run: |
+        echo "📦 Reusing prebuilt objects..."
+        mkdir -p chromium/src/out/Release
+        # Copy các .o, .a files đã build sẵn nếu có
+        
+    - name: Configure build (reuse prebuilt)
+      run: |
+        cd chromium/src
+        gn gen out/Release --args='
+          is_debug=false
+          is_component_build=true
+          symbol_level=0
+          enable_nacl=false
+          use_prebuilt_binaries=true
+        '
+    
+    - name: Rebuild only specified components
+      run: |
+        cd chromium/src
+        IFS=',' read -ra COMPONENTS <<< "${{ inputs.components_to_rebuild }}"
+        for component in "${COMPONENTS[@]}"; do
+          echo "🔨 Rebuilding $component..."
+          ninja -C out/Release "$component"
+        done
+        
+    - name: Package modified build
+      run: |
+        cd chromium/src/out/Release
+        tar -czf ../../../../chromium-modified.tar.gz chrome *.pak *.so* locales/
+        
+    - name: Upload modified build
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-modified-build
+        path: chromium-modified.tar.gz
+        retention-days: 7

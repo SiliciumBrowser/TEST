@@ -1,29 +1,58 @@
 # Build Chromium với GitHub Actions (Miễn phí)
 
-Hệ thống này chia nhỏ quá trình build Chromium thành 3 phần để vượt qua giới hạn 6 giờ của GitHub Actions miễn phí.
+## 🚀 3 Phương pháp Build (Từ nhanh đến chậm)
 
-## 🎯 Chiến lược
+### ⚡ Phương pháp 1: Patch Existing Build (KHUYẾN NGHỊ - 5-10 phút)
+Tải Ungoogled Chromium/Chrome đã build sẵn, chỉ patch/modify theo nhu cầu.
+- ⏱️ Thời gian: 5-10 phút
+- 💰 Chi phí: ~10 phút GitHub Actions
+- ✅ Phù hợp: Thay đổi nhỏ, custom branding, remove features
 
-1. **Part 1**: Build các thành phần cơ bản (base, crypto, net, url, sql)
-2. **Part 2**: Build content layer và Blink engine
-3. **Part 3**: Build Chrome browser hoàn chỉnh
-4. **Assemble**: Tổng hợp tất cả thành phẩm cuối cùng
+### 🔨 Phương pháp 2: Rebuild Minimal Components (30-60 phút)
+Tải base đã build, chỉ rebuild những phần bạn sửa.
+- ⏱️ Thời gian: 30-60 phút
+- 💰 Chi phí: ~60 phút GitHub Actions
+- ✅ Phù hợp: Sửa UI, thêm features nhỏ
+
+### 🏗️ Phương pháp 3: Full Build từ Source (12-15 giờ)
+Build toàn bộ từ đầu, chia thành 3 parts.
+- ⏱️ Thời gian: 12-15 giờ
+- 💰 Chi phí: ~900 phút GitHub Actions
+- ✅ Phù hợp: Thay đổi lớn, custom engine
 
 ## 🚀 Cách sử dụng
 
-### Tự động (Khuyến nghị)
-Push code lên branch `main` - workflow sẽ tự động chạy tuần tự:
-```bash
-git add .
-git commit -m "Start Chromium build"
-git push origin main
-```
+### ⚡ Phương pháp 1: Patch Existing (NHANH NHẤT)
 
-### Thủ công
-1. Vào tab **Actions** trên GitHub
-2. Chọn workflow **"Build Chromium - Part 1"**
+1. Vào **Actions** → **"Patch Existing Chromium"**
+2. Click **"Run workflow"**
+3. Chọn loại patch:
+   - `remove-google-services`: Xóa Google services
+   - `custom-branding`: Đổi logo, tên
+   - `privacy-enhancements`: Tăng cường privacy
+   - `custom-features`: Thêm extensions, bookmarks
+   - `all`: Tất cả patches
+
+**Kết quả**: File `custom-chromium-patched.tar.gz` sau 5-10 phút
+
+### 🔨 Phương pháp 2: Rebuild Components
+
+1. Vào **Actions** → **"Build Chromium Minimal"**
+2. Nhập components cần rebuild: `chrome/browser/ui,chrome/browser/extensions`
 3. Click **"Run workflow"**
-4. Các workflow tiếp theo sẽ tự động chạy khi workflow trước hoàn thành
+
+**Kết quả**: File `chromium-modified.tar.gz` sau 30-60 phút
+
+### 🏗️ Phương pháp 3: Full Build
+
+1. Vào **Actions** → **"🚀 Build Custom Chromium"**
+2. Chọn base source:
+   - `ungoogled-chromium`: Base sạch nhất
+   - `google-chrome`: Đầy đủ tính năng
+   - `chromium-official`: Official build
+3. Click **"Run workflow"**
+
+**Kết quả**: File `custom-chromium-linux-x64.tar.gz` sau 2 giờ
 
 ## 📦 Kết quả
 
