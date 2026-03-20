@@ -43,10 +43,20 @@ jobs:
       if: inputs.base_source == 'ungoogled-chromium'
       run: |
         echo "📥 Downloading Ungoogled Chromium..."
-        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep "browser_download_url.*linux.*tar.xz" | head -1 | cut -d '"' -f 4)
-        wget -O chromium-base.tar.xz "$LATEST_URL"
-        mkdir -p chromium-base
-        tar -xf chromium-base.tar.xz -C chromium-base --strip-components=1
+        
+        # Thử lấy URL từ GitHub API
+        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep -o "https://github.com/.*linux.*x86-64\.tar\.xz" | head -1)
+        
+        if [ -z "$LATEST_URL" ]; then
+          echo "⚠️ Không tìm thấy Ungoogled Chromium, dùng Chromium snapshot..."
+          wget -O chromium-base.zip "https://download-chromium.appspot.com/dl/Linux_x64?type=snapshots"
+          unzip -q chromium-base.zip -d chromium-base
+        else
+          echo "✅ Tìm thấy: $LATEST_URL"
+          wget -O chromium-base.tar.xz "$LATEST_URL"
+          mkdir -p chromium-base
+          tar -xf chromium-base.tar.xz -C chromium-base --strip-components=1
+        fi
         
     - name: Download Google Chrome
       if: inputs.base_source == 'google-chrome'

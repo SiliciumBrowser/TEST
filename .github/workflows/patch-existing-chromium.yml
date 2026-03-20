@@ -31,10 +31,25 @@ jobs:
     - name: Download Ungoogled Chromium
       run: |
         echo "📥 Downloading Ungoogled Chromium..."
-        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep "browser_download_url.*linux.*tar.xz" | head -1 | cut -d '"' -f 4)
-        wget -O chromium.tar.xz "$LATEST_URL"
-        mkdir -p chromium
-        tar -xf chromium.tar.xz -C chromium --strip-components=1
+        
+        # Thử lấy URL từ GitHub API
+        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep -o "https://github.com/.*linux.*x86-64\.tar\.xz" | head -1)
+        
+        # Nếu không có, dùng URL fallback
+        if [ -z "$LATEST_URL" ]; then
+          echo "⚠️ Không tìm thấy từ API, dùng URL trực tiếp..."
+          # Dùng Google Chrome thay thế
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          dpkg-deb -x google-chrome-stable_current_amd64.deb chromium-temp
+          mkdir -p chromium
+          cp -r chromium-temp/opt/google/chrome/* chromium/
+          mv chromium/chrome chromium/chrome || mv chromium/google-chrome chromium/chrome
+        else
+          echo "✅ Tìm thấy: $LATEST_URL"
+          wget -O chromium.tar.xz "$LATEST_URL"
+          mkdir -p chromium
+          tar -xf chromium.tar.xz -C chromium --strip-components=1
+        fi
         
     - name: Apply patches - Remove Google Services
       if: inputs.patch_type == 'remove-google-services' || inputs.patch_type == 'all'

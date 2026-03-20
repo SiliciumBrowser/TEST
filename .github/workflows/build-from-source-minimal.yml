@@ -37,11 +37,20 @@ jobs:
     - name: Download prebuilt Chromium base
       run: |
         echo "📥 Downloading prebuilt base..."
-        # Download từ Ungoogled Chromium
-        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep "browser_download_url.*linux.*tar.xz" | head -1 | cut -d '"' -f 4)
-        wget -O chromium-prebuilt.tar.xz "$LATEST_URL"
-        mkdir -p chromium-prebuilt
-        tar -xf chromium-prebuilt.tar.xz -C chromium-prebuilt
+        
+        # Thử Ungoogled Chromium trước
+        LATEST_URL=$(curl -s https://api.github.com/repos/ungoogled-software/ungoogled-chromium-binaries/releases/latest | grep -o "https://github.com/.*linux.*x86-64\.tar\.xz" | head -1)
+        
+        if [ -z "$LATEST_URL" ]; then
+          echo "⚠️ Dùng Chromium snapshot..."
+          wget -O chromium-prebuilt.zip "https://download-chromium.appspot.com/dl/Linux_x64?type=snapshots"
+          unzip -q chromium-prebuilt.zip -d chromium-prebuilt
+        else
+          echo "✅ Tìm thấy: $LATEST_URL"
+          wget -O chromium-prebuilt.tar.xz "$LATEST_URL"
+          mkdir -p chromium-prebuilt
+          tar -xf chromium-prebuilt.tar.xz -C chromium-prebuilt
+        fi
         
     - name: Fetch Chromium source (shallow, chỉ components cần thiết)
       run: |
