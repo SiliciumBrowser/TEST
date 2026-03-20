@@ -1,0 +1,98 @@
+name: Build Chromium - Part 3 (Chrome Browser)
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Chromium - Part 2 (Content & Blink)"]
+    types:
+      - completed
+
+jobs:
+  build-chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
+    
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git python3 python3-pip lsb-release sudo
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        
+    - name: Fetch Chromium source (shallow)
+      run: |
+        mkdir chromium
+        cd chromium
+        fetch --nohooks --no-history chromium
+        
+    - name: Sync dependencies
+      run: |
+        cd chromium/src
+        gclient sync --no-history --shallow
+        
+    - name: Install build dependencies
+      run: |
+        cd chromium/src
+        ./build/install-build-deps.sh --no-prompt --no-arm
+        
+    - name: Run hooks
+      run: |
+        cd chromium/src
+        gclient runhooks
+        
+    - name: Download Part 2 artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: chromium-part2
+        
+    - name: Extract Part 2
+      run: |
+        tar -xzf chromium-part2.tar.gz -C chromium/src/
+        
+    - name: Configure build
+      run: |
+        cd chromium/src
+        gn gen out/Release --args='
+          is_debug=false
+          is_component_build=true
+          symbol_level=0
+          blink_symbol_level=0
+          enable_nacl=false
+          remove_webcore_debug_symbols=true
+          is_official_build=false
+          use_thin_lto=false
+          chrome_pgo_phase=0
+        '
+    
+    - name: Build Chrome
+      run: |
+        cd chromium/src
+        ninja -C out/Release chrome
+        
+    - name: Compress artifacts
+      run: |
+        cd chromium/src
+        tar -czf ../../chromium-part3.tar.gz out/Release
+        
+    - name: Upload Part 3 artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-part3
+        path: chromium-part3.tar.gz
+        retention-days: 1

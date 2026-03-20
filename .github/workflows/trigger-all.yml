@@ -1,0 +1,36 @@
+name: 🚀 Build Chromium - Trigger All
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Loại build'
+        required: true
+        default: 'minimal'
+        type: choice
+        options:
+          - minimal
+          - full
+
+jobs:
+  trigger-part1:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Part 1
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'build-chromium-part1.yml',
+            ref: 'main'
+          });
+          console.log('✅ Đã trigger Part 1');
+    
+    - name: Thông báo
+      run: |
+        echo "🎯 Đã bắt đầu build Chromium"
+        echo "📊 Theo dõi tiến độ tại: ${{ github.server_url }}/${{ github.repository }}/actions"
+        echo "⏱️ Ước tính thời gian: 12-15 giờ"
+        echo "💾 Kết quả sẽ có trong artifact 'chromium-final-build'"

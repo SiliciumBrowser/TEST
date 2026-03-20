@@ -1,0 +1,82 @@
+name: Assemble Final Chromium Build
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Chromium - Part 3 (Chrome Browser)"]
+    types:
+      - completed
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        
+    - name: List downloaded artifacts
+      run: |
+        ls -lah artifacts/
+        
+    - name: Extract and merge all parts
+      run: |
+        mkdir -p chromium-final/out/Release
+        
+        # Extract part 1
+        if [ -f artifacts/chromium-part1/chromium-part1.tar.gz ]; then
+          tar -xzf artifacts/chromium-part1/chromium-part1.tar.gz -C chromium-final/
+        fi
+        
+        # Extract part 2 (overwrites/adds to part 1)
+        if [ -f artifacts/chromium-part2/chromium-part2.tar.gz ]; then
+          tar -xzf artifacts/chromium-part2/chromium-part2.tar.gz -C chromium-final/
+        fi
+        
+        # Extract part 3 (final chrome binary)
+        if [ -f artifacts/chromium-part3/chromium-part3.tar.gz ]; then
+          tar -xzf artifacts/chromium-part3/chromium-part3.tar.gz -C chromium-final/
+        fi
+        
+    - name: Verify Chrome binary
+      run: |
+        ls -lh chromium-final/out/Release/chrome || echo "Chrome binary not found"
+        file chromium-final/out/Release/chrome || echo "Cannot check file type"
+        
+    - name: Package final build
+      run: |
+        cd chromium-final/out/Release
+        tar -czf ../../../chromium-linux-x64.tar.gz chrome chrome_*.pak icudtl.dat *.so* locales/ resources/
+        
+    - name: Create release info
+      run: |
+        echo "Build Date: $(date)" > build-info.txt
+        echo "Commit: ${{ github.sha }}" >> build-info.txt
+        echo "Workflow Run: ${{ github.run_number }}" >> build-info.txt
+        
+    - name: Upload final Chromium build
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-final-build
+        path: |
+          chromium-linux-x64.tar.gz
+          build-info.txt
+        retention-days: 7
+        
+    - name: Create Release (optional)
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: Chromium Build ${{ github.run_number }}
+        files: |
+          chromium-linux-x64.tar.gz
+          build-info.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
