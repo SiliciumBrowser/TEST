@@ -18,6 +18,9 @@ on:
         default: 'true'
         type: boolean
 
+permissions:
+  contents: write
+
 jobs:
   build-custom:
     runs-on: ubuntu-latest
@@ -122,7 +125,7 @@ jobs:
         retention-days: 30
         
     - name: Create Release
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && success()
       uses: softprops/action-gh-release@v1
       with:
         tag_name: custom-build-${{ github.run_number }}
@@ -143,3 +146,4 @@ jobs:
         files: custom-chromium-linux-x64.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true

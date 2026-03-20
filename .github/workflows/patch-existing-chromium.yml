@@ -14,6 +14,9 @@ on:
           - custom-features
           - all
 
+permissions:
+  contents: write
+
 jobs:
   patch-chromium:
     runs-on: ubuntu-latest
@@ -158,11 +161,15 @@ jobs:
         retention-days: 30
         
     - name: Create Release
+      if: success()
       uses: softprops/action-gh-release@v1
       with:
         tag_name: patched-${{ github.run_number }}
         name: Custom Chromium (Patched) - ${{ inputs.patch_type }}
         body_path: BUILD_INFO.md
         files: custom-chromium-patched.tar.gz
+        draft: false
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
