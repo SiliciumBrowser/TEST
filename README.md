@@ -39,12 +39,21 @@ Chúng ta đã thử 2 cách và chọn cách tốt nhất:
 
 ### Build trên GitHub Actions
 
+#### Linux Build
 1. Vào tab **Actions** trong repository
 2. Chọn workflow **Build SiliciumBrowser**
 3. Click **Run workflow**
 4. Chọn build type (release/debug)
 5. Đợi ~5-6 giờ
-6. Download artifact từ workflow run
+6. Download artifact `silicium-browser-linux.tar.gz`
+
+#### Windows Build
+1. Vào tab **Actions** trong repository
+2. Chọn workflow **Build SiliciumBrowser (Windows)**
+3. Click **Run workflow**
+4. Chọn build type (release/debug)
+5. Đợi ~5-6 giờ
+6. Download artifact `silicium-browser-windows.zip`
 
 ### Build local (nếu có máy mạnh)
 
@@ -173,9 +182,18 @@ cd silicium-browser
 ./silicium-browser
 ```
 
-### Windows (Coming soon)
+### Windows
 
-Build cho Windows cần Windows runner (tốn phí).
+```powershell
+# Extract ZIP file
+# Right-click -> Extract All...
+
+# Run
+cd silicium-browser
+.\silicium-browser.exe
+```
+
+Hoặc double-click vào `silicium-browser.exe`
 
 ## 🐛 Troubleshooting
 

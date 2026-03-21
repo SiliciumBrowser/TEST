@@ -140,15 +140,17 @@ jobs:
         # Determine build args based on input
         if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
           BUILD_TYPE="is_debug=true"
+          OFFICIAL_BUILD="is_official_build=false"
         else
           BUILD_TYPE="is_debug=false"
+          OFFICIAL_BUILD="is_official_build=true"
         fi
         
         # Generate build configuration
         gn gen out/Release --args="
           $BUILD_TYPE
+          $OFFICIAL_BUILD
           is_component_build=false
-          is_official_build=true
           symbol_level=0
           enable_nacl=false
           enable_widevine=true

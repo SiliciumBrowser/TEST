@@ -1,0 +1,306 @@
+name: Build SiliciumBrowser (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Check disk space
+      shell: powershell
+      run: |
+        Write-Host "Disk space before cleanup:"
+        Get-PSDrive C | Select-Object Used,Free
+    
+    - name: Free up disk space
+      shell: powershell
+      run: |
+        # Remove unnecessary Windows components
+        Write-Host "Removing unnecessary components..."
+        
+        # Remove Android SDK
+        if (Test-Path "C:\Android") {
+          Remove-Item -Path "C:\Android" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        # Remove .NET
+        if (Test-Path "C:\Program Files\dotnet") {
+          Remove-Item -Path "C:\Program Files\dotnet" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        # Remove cached packages
+        if (Test-Path "$env:LOCALAPPDATA\Temp") {
+          Remove-Item -Path "$env:LOCALAPPDATA\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        Write-Host "Disk space after cleanup:"
+        Get-PSDrive C | Select-Object Used,Free
+    
+    - name: Install dependencies
+      shell: powershell
+      run: |
+        # Install Chocolatey if not present
+        if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        }
+        
+        # Install required tools
+        choco install -y git python3 visualstudio2022buildtools visualstudio2022-workload-vctools
+        
+    - name: Setup depot_tools
+      shell: powershell
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        [Environment]::SetEnvironmentVariable("PATH", "$PWD\depot_tools;$env:PATH", "Process")
+        
+        # Set depot_tools to use local Python
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        [Environment]::SetEnvironmentVariable("DEPOT_TOOLS_WIN_TOOLCHAIN", "0", "Process")
+        
+    - name: Restore Chromium source cache
+      id: cache-chromium
+      uses: actions/cache@v3
+      with:
+        path: |
+          chromium
+          !chromium/src/out
+        key: chromium-windows-source-${{ github.run_number }}
+        restore-keys: |
+          chromium-windows-source-
+        
+    - name: Fetch Chromium source
+      if: steps.cache-chromium.outputs.cache-hit != 'true'
+      shell: powershell
+      run: |
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        New-Item -ItemType Directory -Force -Path chromium
+        Set-Location chromium
+        
+        & "$PWD\..\depot_tools\fetch.bat" --nohooks --no-history chromium
+        
+    - name: Sync Chromium
+      shell: powershell
+      run: |
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        Set-Location chromium\src
+        & "$PWD\..\..\depot_tools\gclient.bat" sync --no-history --shallow
+        
+    - name: Run gclient hooks
+      shell: powershell
+      run: |
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        Set-Location chromium\src
+        & "$PWD\..\..\depot_tools\gclient.bat" runhooks
+        
+    - name: Copy custom resources
+      shell: powershell
+      run: |
+        # Copy custom new tab page
+        if (Test-Path "custom-ui\new-tab") {
+          Write-Host "Copying custom new tab page..."
+          New-Item -ItemType Directory -Force -Path "chromium\src\chrome\browser\resources\silicium_newtab"
+          Copy-Item -Path "custom-ui\new-tab\*" -Destination "chromium\src\chrome\browser\resources\silicium_newtab\" -Recurse -Force
+        }
+        
+        # Copy custom icons
+        if (Test-Path "custom-resources\icons") {
+          Write-Host "Copying custom icons..."
+          Copy-Item -Path "custom-resources\icons\*" -Destination "chromium\src\chrome\app\theme\chromium\" -Force -ErrorAction SilentlyContinue
+        }
+        
+    - name: Apply custom patches
+      shell: powershell
+      run: |
+        Set-Location chromium\src
+        
+        # Apply patches from patches/ directory
+        if (Test-Path "..\..\patches") {
+          Write-Host "Applying custom patches..."
+          Get-ChildItem "..\..\patches\*.patch" | ForEach-Object {
+            Write-Host "Applying $($_.Name)..."
+            git apply $_.FullName
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Warning: Patch failed: $($_.Name)"
+            }
+          }
+        }
+        
+        # Apply patches from custom-patches/
+        if (Test-Path "..\..\custom-patches") {
+          Write-Host "Applying custom patches..."
+          Get-ChildItem "..\..\custom-patches\*.patch" | ForEach-Object {
+            Write-Host "Applying $($_.Name)..."
+            git apply $_.FullName
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Warning: Patch failed: $($_.Name)"
+            }
+          }
+        }
+    
+    - name: Configure build
+      shell: powershell
+      run: |
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        Set-Location chromium\src
+        
+        # Determine build args based on input
+        if ("${{ github.event.inputs.build_type }}" -eq "debug") {
+          $BUILD_TYPE = "is_debug=true"
+          $OFFICIAL_BUILD = "is_official_build=false"
+        } else {
+          $BUILD_TYPE = "is_debug=false"
+          $OFFICIAL_BUILD = "is_official_build=true"
+        }
+        
+        # Generate build configuration
+        $args = @"
+          $BUILD_TYPE
+          $OFFICIAL_BUILD
+          is_component_build=false
+          symbol_level=0
+          enable_nacl=false
+          enable_widevine=true
+          proprietary_codecs=true
+          ffmpeg_branding=\""Chrome\""
+          use_thin_lto=false
+          chrome_pgo_phase=0
+          
+          # Windows specific
+          target_os=\""win\""
+          target_cpu=\""x64\""
+          
+          # Branding
+          is_chrome_branded=false
+          
+          # Optimizations
+          remove_webcore_debug_symbols=true
+          blink_symbol_level=0
+          v8_symbol_level=0
+          
+          # Disable unnecessary features
+          enable_hangout_services_extension=false
+          enable_reporting=false
+"@
+        
+        & "$PWD\..\..\depot_tools\gn.bat" gen out\Release --args=$args
+        
+    - name: Build SiliciumBrowser
+      shell: powershell
+      run: |
+        $env:PATH = "$PWD\depot_tools;$env:PATH"
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        Set-Location chromium\src
+        
+        Write-Host "Starting build at $(Get-Date)"
+        Write-Host "Available CPU cores: $env:NUMBER_OF_PROCESSORS"
+        
+        # Build chrome target
+        & "$PWD\..\..\depot_tools\ninja.exe" -C out\Release chrome -j $env:NUMBER_OF_PROCESSORS
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build failed. Checking disk space..."
+          Get-PSDrive C | Select-Object Used,Free
+          exit 1
+        }
+        
+        Write-Host "Build completed at $(Get-Date)"
+        
+    - name: Package SiliciumBrowser
+      shell: powershell
+      run: |
+        Set-Location chromium\src\out\Release
+        
+        # Create package directory
+        New-Item -ItemType Directory -Force -Path silicium-browser
+        
+        # Copy essential files
+        Copy-Item chrome.exe silicium-browser\silicium-browser.exe
+        Copy-Item -Recurse locales silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item -Recurse resources silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item *.pak silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item *.bin silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item *.dll silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item -Recurse swiftshader silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item icudtl.dat silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item v8_context_snapshot.bin silicium-browser\ -ErrorAction SilentlyContinue
+        
+        # Copy custom resources
+        if (Test-Path "chrome\browser\resources\silicium_newtab") {
+          Copy-Item -Recurse chrome\browser\resources\silicium_newtab silicium-browser\
+        }
+        
+        # Create ZIP archive
+        Compress-Archive -Path silicium-browser\* -DestinationPath ..\..\..\silicium-browser-windows.zip -Force
+        
+        Write-Host "Package size:"
+        Get-Item ..\..\..\silicium-browser-windows.zip | Select-Object Name,Length
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: silicium-browser-windows-${{ github.event.inputs.build_type || 'release' }}
+        path: silicium-browser-windows.zip
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.0-windows-${{ github.run_number }}
+        name: SiliciumBrowser Windows v1.0.0-${{ github.run_number }}
+        body: |
+          ## SiliciumBrowser Windows Build
+          
+          **Build Type:** ${{ github.event.inputs.build_type || 'release' }}
+          **Build Date:** ${{ github.event.repository.updated_at }}
+          **Platform:** Windows x64
+          
+          ### Features
+          - Custom New Tab Page with video backgrounds
+          - Isolated user data directory
+          - Custom branding and icons
+          
+          ### Installation
+          1. Extract `silicium-browser-windows.zip`
+          2. Run `silicium-browser.exe`
+          
+          ### Notes
+          - This is an automated build from GitHub Actions
+          - Build time: ~5-6 hours
+          - Requires Windows 10/11 x64
+        files: |
+          silicium-browser-windows.zip
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
