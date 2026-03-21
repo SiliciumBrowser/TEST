@@ -74,7 +74,7 @@ jobs:
         Write-Host "🎨 Applying custom UI theme..."
         New-Item -ItemType Directory -Force -Path "chromium\resources\custom"
         
-        $css = @"
+        $css = @'
         /* Custom Theme */
         :root {
           --primary-color: ${{ inputs.theme_color }};
@@ -97,7 +97,7 @@ jobs:
           border: 2px solid var(--primary-color);
           border-radius: 24px;
         }
-"@
+        '@
         
         Set-Content -Path "chromium\resources\custom\theme.css" -Value $css
         Write-Host "✅ Theme applied"
@@ -121,7 +121,7 @@ jobs:
         }
         
         # Create hosts file
-        $hosts = @"
+        $hosts = @'
         # Ad servers
         0.0.0.0 doubleclick.net
         0.0.0.0 googleadservices.com
@@ -129,7 +129,7 @@ jobs:
         0.0.0.0 google-analytics.com
         0.0.0.0 ads.facebook.com
         0.0.0.0 ads.twitter.com
-"@
+        '@
         
         New-Item -ItemType Directory -Force -Path "chromium\resources"
         Set-Content -Path "chromium\resources\adblock-hosts.txt" -Value $hosts
@@ -141,7 +141,7 @@ jobs:
         Write-Host "🔒 Applying privacy enhancements..."
         New-Item -ItemType Directory -Force -Path "chromium\Default"
         
-        $prefs = @"
+        $prefs = @'
         {
           "browser": {
             "check_default_browser": false,
@@ -169,7 +169,7 @@ jobs:
             "enabled": false
           }
         }
-"@
+        '@
         
         Set-Content -Path "chromium\Default\Preferences" -Value $prefs
         Write-Host "✅ Privacy settings applied"
@@ -206,7 +206,7 @@ jobs:
         New-Item -ItemType Directory -Force -Path "chromium\Default"
         
         # Custom bookmarks
-        $bookmarks = @"
+        $bookmarks = @'
         {
           "roots": {
             "bookmark_bar": {
@@ -227,7 +227,7 @@ jobs:
           },
           "version": 1
         }
-"@
+        '@
         
         Set-Content -Path "chromium\Default\Bookmarks" -Value $bookmarks
         Write-Host "✅ Custom features added"
@@ -236,7 +236,7 @@ jobs:
       shell: pwsh
       run: |
         # Create batch launcher
-        $batch = @"
+        $batch = @'
         @echo off
         set DIR=%~dp0
         start "" "%DIR%chrome.exe" ^
@@ -251,14 +251,14 @@ jobs:
           --no-crash-upload ^
           --disable-domain-reliability ^
           %*
-"@
+        '@
         
         Set-Content -Path "chromium\launch.bat" -Value $batch
         
         # Create PowerShell launcher
-        $ps1 = @"
-        `$DIR = Split-Path -Parent `$MyInvocation.MyCommand.Path
-        `$flags = @(
+        $ps1 = @'
+        $DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+        $flags = @(
           '--disable-background-networking',
           '--disable-sync',
           '--disable-translate',
@@ -271,21 +271,21 @@ jobs:
           '--disable-domain-reliability'
         )
         
-        Start-Process -FilePath "`$DIR\chrome.exe" -ArgumentList (`$flags + `$args)
-"@
+        Start-Process -FilePath "$DIR\chrome.exe" -ArgumentList ($flags + $args)
+        '@
         
         Set-Content -Path "chromium\launch.ps1" -Value $ps1
         
         # Create desktop shortcut script
-        $shortcut = @"
-        `$WshShell = New-Object -ComObject WScript.Shell
-        `$Shortcut = `$WshShell.CreateShortcut("`$env:USERPROFILE\Desktop\${{ inputs.browser_name }}.lnk")
-        `$Shortcut.TargetPath = "`$PSScriptRoot\launch.bat"
-        `$Shortcut.WorkingDirectory = "`$PSScriptRoot"
-        `$Shortcut.IconLocation = "`$PSScriptRoot\chrome.exe,0"
-        `$Shortcut.Save()
+        $shortcut = @'
+        $WshShell = New-Object -ComObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\${{ inputs.browser_name }}.lnk")
+        $Shortcut.TargetPath = "$PSScriptRoot\launch.bat"
+        $Shortcut.WorkingDirectory = "$PSScriptRoot"
+        $Shortcut.IconLocation = "$PSScriptRoot\chrome.exe,0"
+        $Shortcut.Save()
         Write-Host "Desktop shortcut created!"
-"@
+        '@
         
         Set-Content -Path "chromium\create-shortcut.ps1" -Value $shortcut
         
@@ -293,7 +293,7 @@ jobs:
       shell: pwsh
       run: |
         # Create README
-        $readme = @"
+        $readme = @'
         ${{ inputs.browser_name }}
         ================================
         
@@ -319,7 +319,7 @@ jobs:
         ✅ Custom Bookmarks
         ✅ DuckDuckGo as default search
         
-"@
+        '@
         
         Set-Content -Path "chromium\README.txt" -Value $readme
         
@@ -329,7 +329,7 @@ jobs:
     - name: 📊 Create Build Info
       shell: pwsh
       run: |
-        $buildInfo = @"
+        $buildInfo = @'
         # ${{ inputs.browser_name }} (Windows)
         
         ## 🎨 Customizations
@@ -342,10 +342,10 @@ jobs:
         
         ## 📥 Installation
         
-        1. Download ``custom-chromium-windows.zip``
-        2. Extract to any folder (e.g., ``C:\CustomBrowser``)
-        3. Run ``launch.bat`` or ``launch.ps1``
-        4. (Optional) Run ``create-shortcut.ps1`` to create desktop shortcut
+        1. Download custom-chromium-windows.zip
+        2. Extract to any folder (e.g., C:\CustomBrowser)
+        3. Run launch.bat or launch.ps1
+        4. (Optional) Run create-shortcut.ps1 to create desktop shortcut
         
         ## ✨ Features
         
@@ -359,14 +359,14 @@ jobs:
         
         ## 🛠️ Customization
         
-        Edit ``launch.bat`` or ``launch.ps1`` to add more flags.
+        Edit launch.bat or launch.ps1 to add more flags.
         
         ## 📝 Notes
         
         - Base: Google Chrome or Ungoogled Chromium
         - Platform: Windows x64
         - No installation required (portable)
-"@
+        '@
         
         Set-Content -Path "BUILD_INFO.md" -Value $buildInfo
         
