@@ -33,20 +33,16 @@ jobs:
     - name: Free up disk space
       shell: powershell
       run: |
-        # Remove unnecessary Windows components
         Write-Host "Removing unnecessary components..."
         
-        # Remove Android SDK
         if (Test-Path "C:\Android") {
           Remove-Item -Path "C:\Android" -Recurse -Force -ErrorAction SilentlyContinue
         }
         
-        # Remove .NET
         if (Test-Path "C:\Program Files\dotnet") {
           Remove-Item -Path "C:\Program Files\dotnet" -Recurse -Force -ErrorAction SilentlyContinue
         }
         
-        # Remove cached packages
         if (Test-Path "$env:LOCALAPPDATA\Temp") {
           Remove-Item -Path "$env:LOCALAPPDATA\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
         }
@@ -57,14 +53,12 @@ jobs:
     - name: Install dependencies
       shell: powershell
       run: |
-        # Install Chocolatey if not present
         if (!(Get-Command choco -ErrorAction SilentlyContinue)) {
           Set-ExecutionPolicy Bypass -Scope Process -Force
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
         }
         
-        # Install required tools
         choco install -y git python3 visualstudio2022buildtools visualstudio2022-workload-vctools
         
     - name: Setup depot_tools
@@ -73,8 +67,6 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         $env:PATH = "$PWD\depot_tools;$env:PATH"
         [Environment]::SetEnvironmentVariable("PATH", "$PWD\depot_tools;$env:PATH", "Process")
-        
-        # Set depot_tools to use local Python
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         [Environment]::SetEnvironmentVariable("DEPOT_TOOLS_WIN_TOOLCHAIN", "0", "Process")
         
@@ -122,14 +114,12 @@ jobs:
     - name: Copy custom resources
       shell: powershell
       run: |
-        # Copy custom new tab page
         if (Test-Path "custom-ui\new-tab") {
           Write-Host "Copying custom new tab page..."
           New-Item -ItemType Directory -Force -Path "chromium\src\chrome\browser\resources\silicium_newtab"
           Copy-Item -Path "custom-ui\new-tab\*" -Destination "chromium\src\chrome\browser\resources\silicium_newtab\" -Recurse -Force
         }
         
-        # Copy custom icons
         if (Test-Path "custom-resources\icons") {
           Write-Host "Copying custom icons..."
           Copy-Item -Path "custom-resources\icons\*" -Destination "chromium\src\chrome\app\theme\chromium\" -Force -ErrorAction SilentlyContinue
@@ -140,7 +130,6 @@ jobs:
       run: |
         Set-Location chromium\src
         
-        # Apply patches from patches/ directory
         if (Test-Path "..\..\patches") {
           Write-Host "Applying custom patches..."
           Get-ChildItem "..\..\patches\*.patch" | ForEach-Object {
@@ -152,7 +141,6 @@ jobs:
           }
         }
         
-        # Apply patches from custom-patches/
         if (Test-Path "..\..\custom-patches") {
           Write-Host "Applying custom patches..."
           Get-ChildItem "..\..\custom-patches\*.patch" | ForEach-Object {
@@ -172,42 +160,35 @@ jobs:
         
         Set-Location chromium\src
         
-        # Determine build args based on input
         if ("${{ github.event.inputs.build_type }}" -eq "debug") {
-          $BUILD_TYPE = "is_debug=true"
-          $OFFICIAL_BUILD = "is_official_build=false"
+          $isDebug = "true"
+          $isOfficial = "false"
         } else {
-          $BUILD_TYPE = "is_debug=false"
-          $OFFICIAL_BUILD = "is_official_build=true"
+          $isDebug = "false"
+          $isOfficial = "true"
         }
         
-        # Create args.gn file
-        $argsContent = @"
-$BUILD_TYPE
-$OFFICIAL_BUILD
-is_component_build=false
-symbol_level=0
-enable_nacl=false
-enable_widevine=true
-proprietary_codecs=true
-ffmpeg_branding="Chrome"
-use_thin_lto=false
-chrome_pgo_phase=0
-
-target_os="win"
-target_cpu="x64"
-
-is_chrome_branded=false
-
-remove_webcore_debug_symbols=true
-blink_symbol_level=0
-v8_symbol_level=0
-
-enable_hangout_services_extension=false
-enable_reporting=false
-"@
-        
         New-Item -ItemType Directory -Force -Path out\Release
+        
+        $argsContent = "is_debug=$isDebug`n"
+        $argsContent += "is_official_build=$isOfficial`n"
+        $argsContent += "is_component_build=false`n"
+        $argsContent += "symbol_level=0`n"
+        $argsContent += "enable_nacl=false`n"
+        $argsContent += "enable_widevine=true`n"
+        $argsContent += "proprietary_codecs=true`n"
+        $argsContent += 'ffmpeg_branding="Chrome"' + "`n"
+        $argsContent += "use_thin_lto=false`n"
+        $argsContent += "chrome_pgo_phase=0`n"
+        $argsContent += 'target_os="win"' + "`n"
+        $argsContent += 'target_cpu="x64"' + "`n"
+        $argsContent += "is_chrome_branded=false`n"
+        $argsContent += "remove_webcore_debug_symbols=true`n"
+        $argsContent += "blink_symbol_level=0`n"
+        $argsContent += "v8_symbol_level=0`n"
+        $argsContent += "enable_hangout_services_extension=false`n"
+        $argsContent += "enable_reporting=false`n"
+        
         Set-Content -Path out\Release\args.gn -Value $argsContent
         
         & "$PWD\..\..\depot_tools\gn.bat" gen out\Release
@@ -223,7 +204,6 @@ enable_reporting=false
         Write-Host "Starting build at $(Get-Date)"
         Write-Host "Available CPU cores: $env:NUMBER_OF_PROCESSORS"
         
-        # Build chrome target
         & "$PWD\..\..\depot_tools\ninja.exe" -C out\Release chrome -j $env:NUMBER_OF_PROCESSORS
         
         if ($LASTEXITCODE -ne 0) {
@@ -239,10 +219,8 @@ enable_reporting=false
       run: |
         Set-Location chromium\src\out\Release
         
-        # Create package directory
         New-Item -ItemType Directory -Force -Path silicium-browser
         
-        # Copy essential files
         Copy-Item chrome.exe silicium-browser\silicium-browser.exe
         Copy-Item -Recurse locales silicium-browser\ -ErrorAction SilentlyContinue
         Copy-Item -Recurse resources silicium-browser\ -ErrorAction SilentlyContinue
@@ -253,12 +231,10 @@ enable_reporting=false
         Copy-Item icudtl.dat silicium-browser\ -ErrorAction SilentlyContinue
         Copy-Item v8_context_snapshot.bin silicium-browser\ -ErrorAction SilentlyContinue
         
-        # Copy custom resources
         if (Test-Path "chrome\browser\resources\silicium_newtab") {
           Copy-Item -Recurse chrome\browser\resources\silicium_newtab silicium-browser\
         }
         
-        # Create ZIP archive
         Compress-Archive -Path silicium-browser\* -DestinationPath ..\..\..\silicium-browser-windows.zip -Force
         
         Write-Host "Package size:"
@@ -267,7 +243,7 @@ enable_reporting=false
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: silicium-browser-windows-${{ github.event.inputs.build_type || 'release' }}
+        name: silicium-browser-windows-${{ github.event.inputs.build_type }}
         path: silicium-browser-windows.zip
         retention-days: 30
         
@@ -280,25 +256,13 @@ enable_reporting=false
         body: |
           ## SiliciumBrowser Windows Build
           
-          **Build Type:** ${{ github.event.inputs.build_type || 'release' }}
-          **Build Date:** ${{ github.event.repository.updated_at }}
+          **Build Type:** ${{ github.event.inputs.build_type }}
           **Platform:** Windows x64
           
-          ### Features
-          - Custom New Tab Page with video backgrounds
-          - Isolated user data directory
-          - Custom branding and icons
-          
           ### Installation
-          1. Extract `silicium-browser-windows.zip`
-          2. Run `silicium-browser.exe`
-          
-          ### Notes
-          - This is an automated build from GitHub Actions
-          - Build time: ~5-6 hours
-          - Requires Windows 10/11 x64
-        files: |
-          silicium-browser-windows.zip
+          1. Extract silicium-browser-windows.zip
+          2. Run silicium-browser.exe
+        files: silicium-browser-windows.zip
         draft: false
         prerelease: true
       env:
