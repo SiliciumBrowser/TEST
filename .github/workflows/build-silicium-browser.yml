@@ -1,0 +1,266 @@
+name: Build SiliciumBrowser
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Free up disk space
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        
+        # Remove unnecessary packages
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo apt-get remove -y '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' 'php.*' '^mongodb-.*' '^mysql-.*' azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
+        sudo apt-get autoremove -y
+        sudo apt-get clean
+        
+        echo "Disk space after cleanup:"
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          git \
+          python3 \
+          python3-pip \
+          lsb-release \
+          sudo \
+          curl \
+          wget
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        export PATH="$PWD/depot_tools:$PATH"
+        
+    - name: Restore Chromium source cache
+      id: cache-chromium
+      uses: actions/cache@v3
+      with:
+        path: |
+          chromium
+          !chromium/src/out
+        key: chromium-full-source-${{ github.run_number }}
+        restore-keys: |
+          chromium-full-source-
+        
+    - name: Fetch Chromium source
+      if: steps.cache-chromium.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p chromium
+        cd chromium
+        fetch --nohooks --no-history chromium
+        
+    - name: Sync Chromium
+      run: |
+        cd chromium/src
+        gclient sync --no-history --shallow
+        
+    - name: Install build dependencies
+      run: |
+        cd chromium/src
+        ./build/install-build-deps.sh --no-prompt --no-arm --no-chromeos-fonts
+        
+    - name: Run gclient hooks
+      run: |
+        cd chromium/src
+        gclient runhooks
+        
+    - name: Copy custom resources
+      run: |
+        # Copy custom new tab page
+        if [ -d "custom-ui/new-tab" ]; then
+          echo "Copying custom new tab page..."
+          mkdir -p chromium/src/chrome/browser/resources/silicium_newtab
+          cp -r custom-ui/new-tab/* chromium/src/chrome/browser/resources/silicium_newtab/
+        fi
+        
+        # Copy custom icons
+        if [ -d "custom-resources/icons" ]; then
+          echo "Copying custom icons..."
+          cp -r custom-resources/icons/* chromium/src/chrome/app/theme/chromium/ || true
+        fi
+        
+    - name: Apply custom patches
+      run: |
+        cd chromium/src
+        
+        # Apply all patches from patches/ directory
+        if [ -d "../../patches" ]; then
+          echo "Applying custom patches..."
+          for patch in ../../patches/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying $patch..."
+              git apply "$patch" || echo "Warning: Patch failed: $patch"
+            fi
+          done
+        fi
+        
+        # Apply custom patches from custom-patches/
+        if [ -d "../../custom-patches" ]; then
+          echo "Applying custom patches..."
+          for patch in ../../custom-patches/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying $patch..."
+              git apply "$patch" || echo "Warning: Patch failed: $patch"
+            fi
+          done
+        fi
+    
+    - name: Configure build
+      run: |
+        cd chromium/src
+        
+        # Determine build args based on input
+        if [ "${{ github.event.inputs.build_type }}" = "debug" ]; then
+          BUILD_TYPE="is_debug=true"
+        else
+          BUILD_TYPE="is_debug=false"
+        fi
+        
+        # Generate build configuration
+        gn gen out/Release --args="
+          $BUILD_TYPE
+          is_component_build=false
+          is_official_build=true
+          symbol_level=0
+          enable_nacl=false
+          enable_widevine=true
+          proprietary_codecs=true
+          ffmpeg_branding=\"Chrome\"
+          use_thin_lto=false
+          chrome_pgo_phase=0
+          enable_precompiled_headers=false
+          use_sysroot=true
+          use_custom_libcxx=true
+          treat_warnings_as_errors=false
+          
+          # Branding
+          is_chrome_branded=false
+          use_unofficial_version_number=false
+          
+          # Optimizations to reduce build time
+          remove_webcore_debug_symbols=true
+          blink_symbol_level=0
+          v8_symbol_level=0
+          
+          # Disable unnecessary features
+          enable_hangout_services_extension=false
+          enable_reporting=false
+          enable_service_discovery=false
+          use_gnome_keyring=false
+        "
+        
+    - name: Build SiliciumBrowser
+      run: |
+        cd chromium/src
+        
+        echo "Starting build at $(date)"
+        echo "Available CPU cores: $(nproc)"
+        echo "Available memory: $(free -h)"
+        
+        # Build chrome target
+        ninja -C out/Release chrome -j$(nproc) || {
+          echo "Build failed. Checking disk space..."
+          df -h
+          exit 1
+        }
+        
+        echo "Build completed at $(date)"
+        
+    - name: Package SiliciumBrowser
+      run: |
+        cd chromium/src/out/Release
+        
+        # Create package directory
+        mkdir -p silicium-browser
+        
+        # Copy essential files
+        cp chrome silicium-browser/silicium-browser
+        cp -r locales silicium-browser/ || true
+        cp -r resources silicium-browser/ || true
+        cp *.pak silicium-browser/ || true
+        cp *.bin silicium-browser/ || true
+        cp -r swiftshader silicium-browser/ || true
+        cp icudtl.dat silicium-browser/ || true
+        cp v8_context_snapshot.bin silicium-browser/ || true
+        
+        # Copy custom resources
+        if [ -d "chrome/browser/resources/silicium_newtab" ]; then
+          cp -r chrome/browser/resources/silicium_newtab silicium-browser/
+        fi
+        
+        # Create archive
+        tar -czf ../../../silicium-browser-linux.tar.gz silicium-browser/
+        
+        echo "Package size:"
+        ls -lh ../../../silicium-browser-linux.tar.gz
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: silicium-browser-linux-${{ github.event.inputs.build_type || 'release' }}
+        path: silicium-browser-linux.tar.gz
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.0-${{ github.run_number }}
+        name: SiliciumBrowser v1.0.0-${{ github.run_number }}
+        body: |
+          ## SiliciumBrowser Build
+          
+          **Build Type:** ${{ github.event.inputs.build_type || 'release' }}
+          **Build Date:** ${{ github.event.repository.updated_at }}
+          **Commit:** ${{ github.sha }}
+          
+          ### Features
+          - Custom New Tab Page with video backgrounds
+          - Isolated user data directory
+          - Custom branding and icons
+          
+          ### Installation
+          ```bash
+          tar -xzf silicium-browser-linux.tar.gz
+          cd silicium-browser
+          ./silicium-browser
+          ```
+          
+          ### Notes
+          - This is an automated build from GitHub Actions
+          - Build time: ~5-6 hours
+          - Platform: Linux x64
+        files: |
+          silicium-browser-linux.tar.gz
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

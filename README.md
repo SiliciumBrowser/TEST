@@ -1,248 +1,227 @@
-# 🎨 Custom Chromium Builder
+# SiliciumBrowser
 
-Build trình duyệt Chromium tùy chỉnh hoàn toàn miễn phí với GitHub Actions!
+Trình duyệt web tùy chỉnh được build từ Chromium source code với các tính năng độc đáo.
 
-## 🖥️ Hỗ trợ nền tảng
+## ✨ Tính năng chính
 
-- ✅ **Windows** (x64) - Workflow riêng
-- ✅ **Linux** (x64) - Workflow riêng
-- 🔜 **macOS** (Coming soon)
+- 🎨 **Custom New Tab Page**: Trang new tab với video/GIF backgrounds, widgets, shortcuts
+- 🔒 **Isolated User Data**: Không xung đột với Chrome đã cài
+- 🎯 **Full Customization**: Tùy chỉnh sâu từ source code
+- ⚡ **Performance**: Tối ưu hóa cho hiệu suất cao
 
-## ✨ Tính năng
+## 🏗️ Build Strategy
 
-- 🎨 **Custom UI Theme** - Thay đổi màu scrollbar, selection
-- 🚫 **AdBlock tích hợp** - Chặn quảng cáo cơ bản
-- 🔒 **Privacy Enhanced** - Tăng cường bảo mật
-- 📚 **Custom Bookmarks** - Bookmarks tùy chỉnh
-- 🔍 **Custom Search Engine** - Đổi công cụ tìm kiếm mặc định
-- ⚡ **Performance Optimized** - Tối ưu hiệu suất
-- 🔒 **ISOLATED** - Không xung đột với Chrome gốc
+### Cách tiếp cận
 
-## 🔒 Isolation - Quan trọng!
+Chúng ta đã thử 2 cách và chọn cách tốt nhất:
 
-Browser này hoàn toàn **ISOLATED** khỏi Chrome gốc:
+1. ❌ **Patch Existing Chrome** (Tải Chrome về rồi sửa)
+   - Quá hạn chế, không thể tùy chỉnh sâu
+   - Đã thử và không hoạt động tốt
 
-- ✅ User Data riêng (trong folder `UserData/`)
-- ✅ KHÔNG ghi đè settings của Chrome
-- ✅ KHÔNG xung đột bookmarks/extensions
-- ✅ Chạy đồng thời với Chrome được
-- ✅ Xóa browser này KHÔNG ảnh hưởng Chrome gốc
+2. ❌ **Component Build** (Build từng phần V8, Blink, Content...)
+   - Quá phức tạp, nhiều lỗi target
+   - Khó tích hợp và tùy chỉnh
 
-Xem chi tiết: `ISOLATION_EXPLAINED.md`
+3. ✅ **Full Chromium Build** (Build toàn bộ từ source)
+   - Tùy chỉnh hoàn toàn mọi thứ
+   - Áp dụng patches dễ dàng
+   - Cách DUY NHẤT để có browser thực sự tùy chỉnh
+
+### GitHub Actions Build
+
+- **Thời gian build**: ~5-6 giờ (trong giới hạn 6h của GitHub Actions)
+- **Platform**: Linux x64
+- **Build type**: Release (optimized) hoặc Debug
+- **Tự động**: Trigger manual hoặc theo schedule
 
 ## 🚀 Quick Start
 
-### Windows Users
+### Build trên GitHub Actions
 
-1. Push code lên GitHub
-2. Vào **Actions** → **"🎨 Custom Chromium Builder (Windows)"**
-3. Click **"Run workflow"**
-4. Điền thông tin và chạy
-5. Tải file `custom-chromium-windows.zip`
-6. Giải nén và chạy `launch.bat`
+1. Vào tab **Actions** trong repository
+2. Chọn workflow **Build SiliciumBrowser**
+3. Click **Run workflow**
+4. Chọn build type (release/debug)
+5. Đợi ~5-6 giờ
+6. Download artifact từ workflow run
 
-### Linux Users
+### Build local (nếu có máy mạnh)
 
-1. Push code lên GitHub
-2. Vào **Actions** → **"🎨 Custom Chromium Builder"**
-3. Click **"Run workflow"**
-4. Điền thông tin và chạy
-5. Tải file `custom-chromium.tar.gz`
-6. Giải nén và chạy `./launch.sh`
+```bash
+# Clone repository
+git clone https://github.com/your-username/SiliciumBrowser.git
+cd SiliciumBrowser
 
-## 📖 Chi tiết
+# Setup depot_tools
+git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+export PATH="$PWD/depot_tools:$PATH"
 
-Xem file `QUICK_START.md` để biết hướng dẫn chi tiết.
+# Fetch Chromium source
+mkdir chromium && cd chromium
+fetch --nohooks chromium
+cd src
+
+# Install dependencies (Linux)
+./build/install-build-deps.sh
+
+# Sync and run hooks
+gclient sync
+gclient runhooks
+
+# Copy custom resources
+cp -r ../../custom-ui/new-tab chrome/browser/resources/silicium_newtab/
+
+# Apply patches
+git apply ../../patches/*.patch
+
+# Configure build
+gn gen out/Release --args='is_debug=false is_official_build=true'
+
+# Build (8-12 giờ trên máy thường)
+ninja -C out/Release chrome
+```
+
+## 📁 Cấu trúc dự án
+
+```
+SiliciumBrowser/
+├── .github/workflows/
+│   └── build-silicium-browser.yml    # GitHub Actions workflow
+├── custom-ui/
+│   └── new-tab/                       # Custom new tab page
+│       ├── index.html
+│       ├── style.css
+│       ├── script.js
+│       ├── chrome-polyfill.js         # Chrome API polyfill
+│       └── ...
+├── custom-resources/
+│   ├── icons/                         # Custom icons
+│   └── extensions/                    # Custom extensions
+├── patches/                           # Chromium patches
+│   └── README.md
+├── custom-patches/                    # Your custom patches
+│   └── README.md
+└── README.md
+```
 
 ## 🎨 Tùy chỉnh
 
-### Thay đổi màu theme
-Khi chạy workflow, nhập màu hex code:
-- `#1a73e8` - Xanh Google
-- `#ff0000` - Đỏ
-- `#9c27b0` - Tím
+### 1. Custom New Tab Page
 
-### Thêm logo riêng
-1. Tạo logo 256x256 PNG
-2. Lưu vào `custom-resources/icons/logo.png`
-3. Push và chạy lại workflow
+File: `custom-ui/new-tab/`
 
-## 🧪 Test trên Windows
+Tính năng:
+- Video/GIF/Image backgrounds
+- Customizable clock & date
+- Weather widget
+- Drag-drop shortcuts
+- Multiple search engines
+- Google suggestions
+- Backup/restore settings
 
-Sau khi tải về và giải nén:
+### 2. Branding
 
-```cmd
-# Test bằng batch
-test-windows.bat
+Thay đổi trong patches:
+- Logo và icons
+- Tên browser
+- Màu sắc theme
+- Default settings
 
-# Hoặc test bằng PowerShell
-powershell -ExecutionPolicy Bypass -File test-windows.ps1
+### 3. Features
+
+Thêm/bỏ features qua GN args:
+```python
+enable_nacl=false              # Tắt NaCl
+proprietary_codecs=true        # Bật codecs
+ffmpeg_branding="Chrome"       # Dùng FFmpeg của Chrome
 ```
 
-## 📊 So sánh
+## 🔧 Patches
 
-| Tính năng | Chromium gốc | Custom Build |
-|-----------|--------------|--------------|
-| Thời gian build | 12-15 giờ | 5-10 phút |
-| Chi phí Actions | ~900 phút | ~10 phút |
-| UI tùy chỉnh | ❌ | ✅ (scrollbar, selection) |
-| AdBlock | ❌ | ✅ (cơ bản) |
-| Privacy | Cơ bản | Nâng cao |
-| Isolation | ❌ | ✅ |
-| Windows support | ✅ | ✅ |
-| Linux support | ✅ | ✅ |
-| Professional | ✅ | ✅ |
-| No warnings | ✅ | ✅ |
+### Tạo patch mới
 
-## 💡 Tips
+```bash
+cd chromium/src
 
-- Workflow chỉ mất 5-10 phút
-- Có thể chạy ~200 lần/tháng (miễn phí)
-- Kết quả lưu 30 ngày
-- Không cần máy mạnh, GitHub Actions lo hết
-- Windows: Portable, không cần cài đặt
-- Linux: Chạy trực tiếp
-- Không xung đột với Chrome gốc
+# Sửa code của bạn
+vim chrome/browser/ui/startup/startup_browser_creator.cc
+
+# Tạo patch
+git diff > ../../custom-patches/my-feature.patch
+```
+
+### Áp dụng patch
+
+Patches tự động được áp dụng trong workflow. Hoặc manual:
+
+```bash
+cd chromium/src
+git apply ../../custom-patches/my-feature.patch
+```
+
+## 📦 Installation
+
+### Linux
+
+```bash
+# Extract
+tar -xzf silicium-browser-linux.tar.gz
+cd silicium-browser
+
+# Run
+./silicium-browser
+```
+
+### Windows (Coming soon)
+
+Build cho Windows cần Windows runner (tốn phí).
 
 ## 🐛 Troubleshooting
 
-Xem file `PERMISSIONS_SETUP.md` nếu gặp lỗi 403.
+### Build timeout trên GitHub Actions
 
-## 📚 Tài liệu
+- Giảm `symbol_level=0`
+- Tắt features không cần: `enable_nacl=false`
+- Dùng `is_component_build=false` (nhỏ hơn)
 
-- `QUICK_START.md` - Hướng dẫn nhanh
-- `PERMISSIONS_SETUP.md` - Cấu hình permissions
-- `HOW_IT_WORKS.md` - Giải thích cách hoạt động
-- `ISOLATION_EXPLAINED.md` - Tại sao cần isolation
-- `custom-resources/README.md` - Tùy chỉnh resources
-- `test-windows.bat` / `test-windows.ps1` - Test trên Windows
+### Disk space issues
 
-## 🚀 Cách sử dụng
+Workflow tự động dọn dẹp:
+- Xóa .NET, PHP, MongoDB...
+- Xóa Android SDK
+- Giải phóng ~30GB
 
-### ⚡ Phương pháp 1: Patch Existing (NHANH NHẤT)
+### Build errors
 
-1. Vào **Actions** → **"Patch Existing Chromium"**
-2. Click **"Run workflow"**
-3. Chọn loại patch:
-   - `remove-google-services`: Xóa Google services
-   - `custom-branding`: Đổi logo, tên
-   - `privacy-enhancements`: Tăng cường privacy
-   - `custom-features`: Thêm extensions, bookmarks
-   - `all`: Tất cả patches
+Check logs trong Actions tab. Thường do:
+- Patches không apply được
+- Dependencies thiếu
+- GN args không hợp lệ
 
-**Kết quả**: File `custom-chromium-patched.tar.gz` sau 5-10 phút
+## 📊 Build Stats
 
-### 🔨 Phương pháp 2: Rebuild Components
+- **Source code size**: ~30GB
+- **Build output**: ~5GB
+- **Final package**: ~200-300MB (compressed)
+- **Build time**: 5-6 giờ (GitHub Actions)
+- **Build time**: 8-12 giờ (máy thường)
 
-1. Vào **Actions** → **"Build Chromium Minimal"**
-2. Nhập components cần rebuild: `chrome/browser/ui,chrome/browser/extensions`
-3. Click **"Run workflow"**
+## 🤝 Contributing
 
-**Kết quả**: File `chromium-modified.tar.gz` sau 30-60 phút
+1. Fork repository
+2. Tạo branch mới: `git checkout -b feature/my-feature`
+3. Commit changes: `git commit -am 'Add my feature'`
+4. Push: `git push origin feature/my-feature`
+5. Tạo Pull Request
 
-### 🏗️ Phương pháp 3: Full Build
+## 📝 License
 
-1. Vào **Actions** → **"🚀 Build Custom Chromium"**
-2. Chọn base source:
-   - `ungoogled-chromium`: Base sạch nhất
-   - `google-chrome`: Đầy đủ tính năng
-   - `chromium-official`: Official build
-3. Click **"Run workflow"**
+Chromium source code: BSD License
+Custom code: MIT License
 
-**Kết quả**: File `custom-chromium-linux-x64.tar.gz` sau 2 giờ
+## 🔗 Links
 
-## 📦 Kết quả
-
-Sau khi tất cả workflows hoàn thành, bạn sẽ có:
-- **Artifact**: `chromium-final-build` chứa file `chromium-linux-x64.tar.gz`
-- **Release** (nếu push lên main): Tự động tạo release với tag `build-{số}`
-
-## ⚙️ Tối ưu hóa
-
-### Giảm thời gian build:
-- `is_component_build=true`: Build dạng shared libraries (nhanh hơn)
-- `symbol_level=0`: Không tạo debug symbols
-- `--no-history`: Chỉ clone shallow, không lấy toàn bộ lịch sử
-- Xóa các package không cần thiết để tăng disk space
-
-### Giảm dung lượng:
-- Chỉ package các file cần thiết để chạy Chrome
-- Artifacts tự động xóa sau 1-7 ngày
-
-## 🔧 Tùy chỉnh
-
-Chỉnh sửa file `.github/workflows/build-chromium-part*.yml` để:
-- Thay đổi target build (ví dụ: `chrome`, `content_shell`, `headless_shell`)
-- Điều chỉnh build args trong phần `gn gen`
-- Thêm/bớt components trong mỗi part
-
-### Ví dụ build args khác:
-
-```gn
-# Build nhỏ gọn hơn
-is_debug=false
-is_component_build=true
-symbol_level=0
-enable_nacl=false
-use_thin_lto=false
-is_official_build=false
-
-# Build tối ưu (chậm hơn nhưng nhỏ hơn)
-is_debug=false
-is_component_build=false
-is_official_build=true
-symbol_level=0
-```
-
-## ⚠️ Lưu ý
-
-1. **Thời gian**: Mỗi part mất 3-5 giờ, tổng ~12-15 giờ
-2. **Giới hạn GitHub Actions miễn phí**: 2,000 phút/tháng
-   - 1 lần build đầy đủ ≈ 900-1000 phút
-   - Bạn có thể build ~2 lần/tháng
-3. **Disk space**: Cần ~100GB, GitHub Actions cung cấp ~14GB free
-   - Đã tối ưu bằng cách xóa packages không cần thiết
-   - Sử dụng shallow clone
-4. **Artifacts**: Tự động xóa sau 1-7 ngày để tiết kiệm storage
-
-## 🐛 Xử lý lỗi
-
-### Lỗi "Out of disk space":
-- Workflow đã tự động xóa các package lớn
-- Nếu vẫn thiếu, giảm số lượng targets trong mỗi part
-
-### Lỗi "Timeout":
-- Giảm số lượng targets build trong mỗi part
-- Chia thành nhiều parts hơn
-
-### Lỗi "Artifact not found":
-- Kiểm tra workflow trước đó có chạy thành công không
-- Artifacts chỉ lưu 1 ngày, chạy lại nếu hết hạn
-
-## 📊 Monitoring
-
-Theo dõi tiến độ:
-1. Vào tab **Actions**
-2. Xem workflow đang chạy
-3. Click vào workflow để xem logs chi tiết
-
-## 🎁 Kết quả cuối cùng
-
-File `chromium-linux-x64.tar.gz` chứa:
-- `chrome`: Binary chính
-- `*.pak`, `*.so`: Các thư viện và resources
-- `locales/`: Ngôn ngữ
-- `resources/`: Icons và assets
-
-### Cách chạy:
-```bash
-tar -xzf chromium-linux-x64.tar.gz
-cd Release
-./chrome
-```
-
-## 💡 Tips
-
-- Chạy vào ban đêm để tận dụng thời gian chờ
-- Sử dụng branch riêng để test, tránh spam main branch
-- Có thể tắt auto-trigger bằng cách xóa phần `push:` trong workflows
+- [Chromium Build Instructions](https://chromium.googlesource.com/chromium/src/+/main/docs/linux/build_instructions.md)
+- [GN Build Configuration](https://gn.googlesource.com/gn/+/main/docs/reference.md)
+- [Chromium Patches](https://chromium.googlesource.com/chromium/src/+/main/docs/contributing.md)

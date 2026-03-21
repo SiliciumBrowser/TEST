@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Video Background -->
+    <video id="background-video" loop muted autoplay playsinline></video>
+    <!-- TOP RIGHT LINKS WIDGET -->
+    <div id="top-right-links-widget" class="widget-container">
+        <a href="https://mail.google.com" target="_blank" title="Gmail" class="top-link-item">
+            <span class="material-symbols-outlined">mail</span>
+        </a>
+        <a href="https://www.youtube.com" target="_blank" title="YouTube" class="top-link-item">
+            <span class="material-symbols-outlined">smart_display</span>
+        </a>
+    </div>
+
+    <!-- WEATHER WIDGET -->
+    <div id="weather-widget-container" class="widget-container hidden">
+        <span id="weather-icon" class="material-symbols-outlined">thermostat</span>
+        <span id="weather-temp">--°C</span>
+        <span id="weather-desc">Đang tải...</span>
+        <span id="weather-location"></span>
+    </div>
+
+    <div class="container">
+        <div class="top-content">
+            <h1 id="main-clock-widget">00:00:00</h1>
+            <p id="main-date-widget">Thứ Hai, ngày 1 tháng 1 năm 2024</p>
+
+            <div class="search-bar-container">
+                <div id="search-engine-selector" class="search-engine-selector" tabindex="0"
+                    title="Chọn công cụ tìm kiếm">
+                    <span id="current-search-icon" class="current-search-icon-display"></span>
+                    <div id="search-engine-dropdown" class="search-engine-dropdown">
+                        <!-- Search engines -->
+                    </div>
+                </div>
+                <input type="text" id="search-input" placeholder="Tìm kiếm hoặc nhập địa chỉ">
+            </div>
+        </div>
+
+        <div id="shortcuts-container" class="shortcuts-grid">
+            <!-- Lối tắt -->
+        </div>
+
+        <button id="add-shortcut-btn" class="icon-button" title="Thêm lối tắt mới">
+            <span class="material-symbols-outlined">add</span>
+        </button>
+
+        <div id="shortcut-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button shortcut-modal-close-btn">×</span>
+                <h2><span id="modal-title">Thêm Lối tắt Mới</span></h2>
+                <input type="hidden" id="shortcut-index">
+                <label for="shortcut-name">Tên:</label>
+                <input type="text" id="shortcut-name" placeholder="Ví dụ: Gmail">
+                <label for="shortcut-url">URL:</label>
+                <input type="text" id="shortcut-url" placeholder="https://mail.google.com">
+                <button id="save-shortcut-btn">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <button id="settings-btn" class="icon-button floating-btn" title="Mở cài đặt">
+        <span class="material-symbols-outlined">settings</span>
+    </button>
+
+    <div id="settings-modal" class="modal">
+        <div class="modal-content settings-panel">
+            <span class="close-button settings-modal-close-btn">×</span>
+            <h2><span class="material-symbols-outlined">tune</span> Cài đặt Trang Mới</h2>
+
+            <div class="setting-section collapsible">
+                <h3 class="collapsible-header">
+                    <span class="material-symbols-outlined section-icon">image</span> Hình nền
+                    <span class="material-symbols-outlined collapsible-icon">expand_more</span>
+                </h3>
+                <div class="collapsible-content">
+                    <div class="setting-subsection">
+                        <label for="upload-background-input" class="setting-option file-upload-label">
+                            <span class="material-symbols-outlined">upload_file</span> Tải lên từ máy (ảnh, GIF, video)
+                        </label>
+                        <input type="file" id="upload-background-input" accept="image/*,image/gif,video/*"
+                            style="display: none;">
+                    </div>
+
+                    <div class="setting-subsection">
+                        <p class="setting-option-label">Nhập URL (ảnh, GIF, video):</p>
+                        <input type="text" id="background-url-input" class="setting-input"
+                            placeholder="Dán link ảnh, GIF hoặc video vào đây...">
+                        <div class="setting-actions">
+                            <button id="save-background-url-btn" class="setting-action-button">Lưu URL</button>
+                            <button id="remove-background-image-btn" class="setting-action-button danger">Xóa Ảnh/GIF/Video
+                                nền</button>
+                        </div>
+                    </div>
+                    <div class="setting-subsection">
+                        <p class="setting-option-label">Một màu:</p>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="solid-color-input" class="setting-color-input" value="#202124">
+                            <button id="save-solid-color-btn" class="setting-action-button">Áp dụng màu</button>
+                        </div>
+                    </div>
+                    <p class="settings-hint">Ảnh/GIF/Video nền sẽ ưu tiên hơn màu nền.</p>
+                </div>
+            </div>
+
+
+
+            <div class="setting-section collapsible">
+                <h3 class="collapsible-header">
+                    <span class="material-symbols-outlined section-icon">widgets</span> Widget
+                    <span class="material-symbols-outlined collapsible-icon">expand_more</span>
+                </h3>
+                <div class="collapsible-content">
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Đồng hồ chính"
+                            data-widget="mainClock">schedule</span>
+                        <label for="widget-main-clock-toggle">Đồng hồ chính</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-main-clock-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Ngày giờ"
+                            data-widget="mainDate">calendar_month</span>
+                        <label for="widget-main-date-toggle">Ngày giờ</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-main-date-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Thời tiết"
+                            data-widget="weather">cloud</span>
+                        <label for="widget-weather-toggle">Thời tiết</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-weather-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Links"
+                            data-widget="topLinks">link</span>
+                        <label for="widget-top-links-toggle">Hiển thị Links (Gmail | Youtube)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-top-links-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Lịch sử tìm kiếm"
+                            data-widget="searchHistory">history</span>
+                        <label for="widget-search-history-toggle">Lịch sử tìm kiếm</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-search-history-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection toggle-option">
+                        <span class="material-symbols-outlined widget-item-info-icon" title="Đồng bộ lịch sử trình duyệt"
+                            data-widget="browserHistorySync">sync</span>
+                        <label for="widget-browser-history-sync-toggle">Đồng bộ lịch sử trình duyệt</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-browser-history-sync-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <p class="settings-hint">Widget Thời tiết yêu cầu quyền truy cập vị trí.</p>
+                </div>
+            </div>
+
+            <div class="setting-section collapsible">
+                <h3 class="collapsible-header">
+                    <span class="material-symbols-outlined section-icon">shortcut</span> Lối tắt
+                    <span class="material-symbols-outlined collapsible-icon">expand_more</span>
+                </h3>
+                <div class="collapsible-content">
+                    <div class="setting-subsection toggle-option">
+                        <label for="widget-shortcuts-toggle">Hiển thị Lối tắt</label>
+                        <label class="switch">
+                            <input type="checkbox" id="widget-shortcuts-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <button id="clear-shortcuts-btn" class="setting-action-button danger">Xóa tất cả Lối
+                            tắt</button>
+                    </div>
+                    <div class="setting-subsection">
+                        <label for="shortcuts-rows-input">Số hàng lối tắt:</label>
+                        <input type="number" id="shortcuts-rows-input" class="setting-input" min="1" value="2"
+                            style="width:80px;">
+                    </div>
+                    <div class="setting-subsection">
+                        <label for="shortcuts-per-row-input">Số lối tắt trên một hàng:</label>
+                        <input type="number" id="shortcuts-per-row-input" class="setting-input" min="1" value="4"
+                            style="width:80px;">
+                    </div>
+                    <div class="setting-subsection">
+                        <label for="shortcuts-opacity-input">Độ trong suốt của Lối tắt:</label>
+                        <input type="number" id="shortcuts-opacity-input" class="setting-input" min="0" max="100" value="100" style="width:80px;">
+                        <span id="shortcuts-opacity-value">100%</span>
+                    </div>
+                    <div class="setting-subsection">
+                        <span class="setting-info-text">Kéo thả để sắp xếp lại thứ tự lối tắt.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-section collapsible">
+                <h3 class="collapsible-header">
+                    <span class="material-symbols-outlined section-icon">manage_search</span> Quản lý Công cụ Tìm kiếm
+                    <span class="material-symbols-outlined collapsible-icon">expand_more</span>
+                </h3>
+                <div class="collapsible-content">
+                    <p class="setting-info-text">Lựa chọn công cụ tìm kiếm mặc định được thực hiện trên thanh tìm kiếm
+                        chính.</p>
+                    <h4>Danh sách công cụ tìm kiếm:</h4>
+                    <ul id="search-engine-list" class="setting-list">
+                        <!-- JS Rendered -->
+                    </ul>
+                    <h4>Thêm Công cụ Tìm kiếm Mới:</h4>
+                    <div id="add-search-engine-form">
+                        <input type="text" id="new-se-name" class="setting-input"
+                            placeholder="Tên hiển thị (ví dụ: My Search)">
+                        <input type="text" id="new-se-url" class="setting-input"
+                            placeholder="URL tìm kiếm (dùng {s} cho query)">
+                        <input type="text" id="new-se-icon-url" class="setting-input" placeholder="URL Icon (tùy chọn)">
+                        <button id="save-new-se-btn" class="setting-action-button">Thêm Công cụ</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-section collapsible">
+                <h3 class="collapsible-header">
+                    <span class="material-symbols-outlined section-icon">settings</span> Cài đặt khác
+                    <span class="material-symbols-outlined collapsible-icon">expand_more</span>
+                </h3>
+                <div class="collapsible-content">
+                    <div class="setting-subsection">
+                        <h4>
+                            <span class="material-symbols-outlined section-icon">backup</span> Sao lưu &amp; Phục hồi
+                        </h4>
+                        <button id="backup-settings-btn" class="setting-action-button">Sao lưu Cài đặt</button>
+                        <input type="file" id="restore-settings-input" accept="application/json" style="display:none;">
+                        <label for="restore-settings-input" class="setting-action-button"
+                            style="display:inline-block;cursor:pointer;">Tải lên Sao lưu</label>
+                        <p class="settings-hint">Sao lưu sẽ bao gồm tất cả cài đặt và hình ảnh đã tải lên (nếu có).</p>
+                    </div>
+                    <!-- Bạn có thể thêm các cài đặt khác vào đây nếu muốn -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal cài đặt widget riêng -->
+    <div id="widget-setting-modal" class="modal">
+        <div class="modal-content widget-setting-modal-content">
+            <span class="close-button widget-setting-modal-close-btn">×</span>
+            <h2 id="widget-setting-modal-title">Cài đặt Widget</h2>
+            <div id="widget-setting-modal-body">
+                <!-- Nội dung động sẽ được JS render -->
+                <!--
+                Khi là đồng hồ (mainClock) sẽ được JS render như sau:
+                <form id="clock-settings-form">
+                    <div class="setting-subsection">
+                        <label>Font chữ:
+                            <select id="clock-font-family">
+                                <option value="inherit">Mặc định</option>
+                                <option value="Roboto">Roboto</option>
+                                <option value="Segoe UI">Segoe UI</option>
+                                <option value="Arial">Arial</option>
+                                <option value="monospace">Monospace</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <label>Màu chữ:
+                            <input type="color" id="clock-font-color" value="#e8eaed">
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <label>Đổ bóng:
+                            <input type="checkbox" id="clock-shadow-toggle">
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <label>Định dạng:
+                            <select id="clock-format">
+                                <option value="24h">24h</option>
+                                <option value="12h">12h (AM/PM)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <label>Kích cỡ:
+                            <input type="range" id="clock-font-size" min="24" max="120" value="76">
+                            <span id="clock-font-size-value">76px</span>
+                        </label>
+                    </div>
+                    <div class="setting-subsection">
+                        <label>
+                            <input type="checkbox" id="clock-border-toggle"> Viền động trong suốt
+                        </label>
+                    </div>
+                    <button type="submit" class="setting-action-button">Lưu</button>
+                </form>
+                -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal cài đặt Ngày giờ -->
+    <div id="date-settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button date-settings-modal-close-btn">×</span>
+            <h2>Cài đặt Ngày giờ</h2>
+            <form id="date-settings-form">
+                <div class="setting-subsection">
+                    <label>Font chữ:
+                        <select id="date-font-family">
+                            <option value="inherit">Mặc định</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Segoe UI">Segoe UI</option>
+                            <option value="Arial">Arial</option>
+                            <option value="monospace">Monospace</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>Màu chữ:
+                        <input type="color" id="date-font-color" value="#bdc1c6">
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>Đổ bóng:
+                        <input type="checkbox" id="date-shadow-toggle">
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>Định dạng:
+                        <select id="date-format">
+                            <option value="full">Thứ, ngày tháng năm</option>
+                            <option value="short">dd/MM/yyyy</option>
+                            <option value="iso">yyyy-MM-dd</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>Kích cỡ:
+                        <input type="range" id="date-font-size" min="12" max="48" value="17">
+                        <span id="date-font-size-value">17px</span>
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>
+                        <input type="checkbox" id="date-border-toggle"> Viền động trong suốt
+                    </label>
+                </div>
+                <div class="setting-actions">
+                    <button type="submit" class="setting-action-button">Lưu</button>
+                    <button type="button" id="date-reset-default-btn" class="setting-action-button danger"
+                        style="margin-left:8px;">Đặt mặc định</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal cài đặt Thời tiết -->
+    <div id="weather-settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button weather-settings-modal-close-btn">×</span>
+            <h2>Cài đặt Thời tiết</h2>
+            <form id="weather-settings-form">
+                <div class="setting-subsection">
+                    <label>Định dạng độ:
+                        <select id="weather-temp-unit">
+                            <option value="C">Celsius (°C)</option>
+                            <option value="F">Fahrenheit (°F)</option>
+                            <option value="K">Kelvin (K)</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>
+                        <input type="checkbox" id="weather-coord-toggle">
+                        Nhập tọa độ thủ công
+                    </label>
+                    <input type="text" id="weather-lat" class="setting-input" placeholder="Vĩ độ (lat)"
+                        style="display:none;">
+                    <input type="text" id="weather-lon" class="setting-input" placeholder="Kinh độ (lon)"
+                        style="display:none;">
+                </div>
+                <div class="setting-subsection">
+                    <label>
+                        <input type="checkbox" id="weather-icon-toggle" checked>
+                        Hiển thị icon thời tiết
+                    </label>
+                </div>
+                <div class="setting-subsection">
+                    <label>
+                        <input type="checkbox" id="weather-notify-toggle">
+                        Thông báo thời tiết
+                    </label>
+                </div>
+                <div class="setting-actions">
+                    <button type="submit" class="setting-action-button">Lưu</button>
+                    <button type="button" id="weather-reset-default-btn" class="setting-action-button danger"
+                        style="margin-left:8px;">Đặt mặc định</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Load Chrome API Polyfill FIRST -->
+    <script src="chrome-polyfill.js"></script>
+    <script src="setting.js"></script>
+    <script src="widget.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

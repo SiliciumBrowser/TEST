@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chrome Polyfill</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #202124;
+            color: #e8eaed;
+        }
+        .test-section {
+            background: #292a2d;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #8ab4f8;
+            color: #202124;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #aecbfa;
+        }
+        .result {
+            background: #3c4043;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { color: #81c995; }
+        .error { color: #f28b82; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Chrome API Polyfill Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Check Chrome API Availability</h2>
+        <button onclick="testChromeAPI()">Run Test</button>
+        <div id="test1-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Save Data</h2>
+        <input type="text" id="test-key" placeholder="Key" value="testKey">
+        <input type="text" id="test-value" placeholder="Value" value="Hello SiliciumBrowser!">
+        <button onclick="testSave()">Save</button>
+        <div id="test2-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Load Data</h2>
+        <input type="text" id="load-key" placeholder="Key" value="testKey">
+        <button onclick="testLoad()">Load</button>
+        <div id="test3-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Load All Data</h2>
+        <button onclick="testLoadAll()">Load All</button>
+        <div id="test4-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Remove Data</h2>
+        <input type="text" id="remove-key" placeholder="Key" value="testKey">
+        <button onclick="testRemove()">Remove</button>
+        <div id="test5-result" class="result"></div>
+    </div>
+
+    <!-- Load polyfill first -->
+    <script src="chrome-polyfill.js"></script>
+    
+    <script>
+        function log(elementId, message, isError = false) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = 'result ' + (isError ? 'error' : 'success');
+        }
+
+        function testChromeAPI() {
+            const result = {
+                'chrome exists': typeof chrome !== 'undefined',
+                'chrome.storage exists': typeof chrome !== 'undefined' && typeof chrome.storage !== 'undefined',
+                'chrome.storage.local exists': typeof chrome !== 'undefined' && typeof chrome.storage !== 'undefined' && typeof chrome.storage.local !== 'undefined',
+                'chrome.storage.local.get exists': typeof chrome !== 'undefined' && typeof chrome.storage !== 'undefined' && typeof chrome.storage.local !== 'undefined' && typeof chrome.storage.local.get === 'function',
+                'chrome.storage.local.set exists': typeof chrome !== 'undefined' && typeof chrome.storage !== 'undefined' && typeof chrome.storage.local !== 'undefined' && typeof chrome.storage.local.set === 'function',
+            };
+            log('test1-result', JSON.stringify(result, null, 2));
+        }
+
+        function testSave() {
+            const key = document.getElementById('test-key').value;
+            const value = document.getElementById('test-value').value;
+            
+            try {
+                chrome.storage.local.set({ [key]: value }, () => {
+                    log('test2-result', `✅ Saved: ${key} = "${value}"`);
+                });
+            } catch (error) {
+                log('test2-result', `❌ Error: ${error.message}`, true);
+            }
+        }
+
+        function testLoad() {
+            const key = document.getElementById('load-key').value;
+            
+            try {
+                chrome.storage.local.get([key], (result) => {
+                    if (result[key]) {
+                        log('test3-result', `✅ Loaded: ${key} = "${result[key]}"`);
+                    } else {
+                        log('test3-result', `⚠️ Key "${key}" not found`);
+                    }
+                });
+            } catch (error) {
+                log('test3-result', `❌ Error: ${error.message}`, true);
+            }
+        }
+
+        function testLoadAll() {
+            try {
+                chrome.storage.local.get(null, (result) => {
+                    log('test4-result', `✅ All data:\n${JSON.stringify(result, null, 2)}`);
+                });
+            } catch (error) {
+                log('test4-result', `❌ Error: ${error.message}`, true);
+            }
+        }
+
+        function testRemove() {
+            const key = document.getElementById('remove-key').value;
+            
+            try {
+                chrome.storage.local.remove(key, () => {
+                    log('test5-result', `✅ Removed: ${key}`);
+                });
+            } catch (error) {
+                log('test5-result', `❌ Error: ${error.message}`, true);
+            }
+        }
+
+        // Auto-run first test on load
+        window.addEventListener('load', () => {
+            testChromeAPI();
+        });
+    </script>
+</body>
+</html>
