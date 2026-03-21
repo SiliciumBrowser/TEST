@@ -85,8 +85,10 @@ jobs:
           v8_use_external_startup_data=true
           v8_enable_pointer_compression=true
           v8_enable_31bit_smis_on_64bit_arch=true
+          v8_enable_sandbox=false
           symbol_level=0
-          use_custom_libcxx=false
+          use_custom_libcxx=true
+          use_safe_libcxx=true
         '
         
     - name: Build V8
