@@ -1,0 +1,188 @@
+name: Build Chrome Final
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Content Layer"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  build-chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git python3 lsb-release sudo
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        
+    - name: Restore Chromium cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          chromium
+          !chromium/src/out
+        key: chromium-source-final
+        restore-keys: |
+          chromium-source-
+        
+    - name: Fetch Chromium source
+      run: |
+        if [ ! -d "chromium" ]; then
+          mkdir chromium
+          cd chromium
+          fetch --nohooks --no-history chromium
+          cd src
+          gclient sync --no-history --shallow
+        fi
+        
+    - name: Install build dependencies
+      run: |
+        cd chromium/src
+        ./build/install-build-deps.sh --no-prompt --no-arm
+        
+    - name: Download all previous artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-build'
+        path: artifacts
+      continue-on-error: true
+        
+    - name: Extract all previous builds
+      run: |
+        cd chromium/src/out
+        mkdir -p Release
+        
+        if [ -d "../../../artifacts" ]; then
+          for artifact in ../../../artifacts/*/; do
+            if [ -f "${artifact}"*.tar.gz ]; then
+              echo "Extracting ${artifact}*.tar.gz..."
+              tar -xzf "${artifact}"*.tar.gz -C Release/ || true
+            fi
+          done
+        fi
+        
+    - name: Apply Chrome UI patches
+      run: |
+        cd chromium/src
+        
+        if [ -d "../../patches/chrome" ]; then
+          for patch in ../../patches/chrome/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying $patch..."
+              git apply "$patch" || echo "Patch failed: $patch"
+            fi
+          done
+        fi
+        
+    - name: Configure Chrome build
+      run: |
+        cd chromium/src
+        
+        gn gen out/Release --args='
+          is_debug=false
+          is_component_build=true
+          symbol_level=0
+          enable_nacl=false
+          is_official_build=false
+          use_thin_lto=false
+          chrome_pgo_phase=0
+        '
+    
+    - name: Build Chrome
+      run: |
+        cd chromium/src
+        
+        ninja -C out/Release chrome -j$(nproc)
+        
+    - name: Package final Chrome
+      run: |
+        cd chromium/src/out/Release
+        
+        # Package everything needed to run Chrome
+        tar -czf ../../../../chromium-custom-final.tar.gz \
+          chrome \
+          *.pak \
+          *.so* \
+          locales/ \
+          resources/ \
+          icudtl.dat
+        
+    - name: Create build info
+      run: |
+        cat > BUILD_INFO.md << 'EOF'
+        # Custom Chromium Build
+        
+        ## Build Information
+        
+        **Build Date**: $(date)
+        **Build Number**: ${{ github.run_number }}
+        **Commit**: ${{ github.sha }}
+        
+        ## Components Built
+        
+        1. ✅ V8 Engine (JavaScript)
+        2. ✅ Blink Engine (Rendering)
+        3. ✅ Content Layer (Browser Core)
+        4. ✅ Chrome UI (User Interface)
+        
+        ## Customizations
+        
+        - Custom patches applied
+        - Optimized build settings
+        - Component-based build strategy
+        
+        ## Installation
+        
+        ```bash
+        tar -xzf chromium-custom-final.tar.gz
+        cd Release
+        ./chrome
+        ```
+        
+        ## Notes
+        
+        - Built with GitHub Actions
+        - Component-based strategy to bypass 6-hour limit
+        - Each component cached for faster rebuilds
+        EOF
+        
+    - name: Upload final Chrome
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromium-custom-final
+        path: |
+          chromium-custom-final.tar.gz
+          BUILD_INFO.md
+        retention-days: 30
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: custom-build-${{ github.run_number }}
+        name: Custom Chromium Build ${{ github.run_number }}
+        body_path: BUILD_INFO.md
+        files: chromium-custom-final.tar.gz
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true

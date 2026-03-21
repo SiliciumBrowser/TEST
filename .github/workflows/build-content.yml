@@ -1,0 +1,132 @@
+name: Build Content Layer
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Blink Engine"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  build-content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git python3 lsb-release sudo
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        
+    - name: Restore Chromium cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          chromium
+          !chromium/src/out
+        key: chromium-source-${{ hashFiles('.github/workflows/build-content.yml') }}
+        restore-keys: |
+          chromium-source-
+        
+    - name: Fetch Chromium source
+      run: |
+        if [ ! -d "chromium" ]; then
+          mkdir chromium
+          cd chromium
+          fetch --nohooks --no-history chromium
+          cd src
+          gclient sync --no-history --shallow
+        fi
+        
+    - name: Install build dependencies
+      run: |
+        cd chromium/src
+        ./build/install-build-deps.sh --no-prompt --no-arm
+        
+    - name: Download previous artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-build'
+        path: artifacts
+      continue-on-error: true
+        
+    - name: Extract previous builds
+      run: |
+        if [ -d "artifacts" ]; then
+          cd chromium/src/out
+          mkdir -p Release
+          for artifact in ../../../artifacts/*/; do
+            if [ -f "${artifact}"*.tar.gz ]; then
+              tar -xzf "${artifact}"*.tar.gz -C Release/ || true
+            fi
+          done
+        fi
+        
+    - name: Apply custom patches
+      run: |
+        cd chromium/src
+        
+        if [ -d "../../patches/content" ]; then
+          for patch in ../../patches/content/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying $patch..."
+              git apply "$patch" || echo "Patch failed: $patch"
+            fi
+          done
+        fi
+        
+    - name: Configure Content build
+      run: |
+        cd chromium/src
+        
+        gn gen out/Release --args='
+          is_debug=false
+          is_component_build=true
+          symbol_level=0
+          enable_nacl=false
+          is_official_build=false
+          use_thin_lto=false
+        '
+    
+    - name: Build Content
+      run: |
+        cd chromium/src
+        
+        ninja -C out/Release \
+          content \
+          content_shell \
+          -j$(nproc)
+        
+    - name: Package Content artifacts
+      run: |
+        cd chromium/src/out/Release
+        tar -czf ../../../../content-build.tar.gz \
+          content_shell \
+          obj/content \
+          *.so \
+          *.pak
+        
+    - name: Upload Content artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: content-layer-build
+        path: content-build.tar.gz
+        retention-days: 7

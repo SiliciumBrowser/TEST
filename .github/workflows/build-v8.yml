@@ -1,0 +1,146 @@
+name: Build V8 Engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-v8.yml'
+      - 'patches/v8/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build-v8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Maximize build space
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git python3 python3-pip lsb-release sudo curl
+        
+    - name: Setup depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo "$PWD/depot_tools" >> $GITHUB_PATH
+        
+    - name: Restore V8 cache
+      id: cache-v8
+      uses: actions/cache@v3
+      with:
+        path: |
+          v8
+          !v8/out
+        key: v8-source-${{ hashFiles('.github/workflows/build-v8.yml') }}
+        restore-keys: |
+          v8-source-
+        
+    - name: Fetch V8 source
+      if: steps.cache-v8.outputs.cache-hit != 'true'
+      run: |
+        mkdir v8
+        cd v8
+        fetch v8
+        cd v8
+        git checkout main
+        gclient sync
+        
+    - name: Apply custom patches
+      run: |
+        cd v8/v8
+        
+        # Apply patches if exist
+        if [ -d "../../patches/v8" ]; then
+          for patch in ../../patches/v8/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "Applying $patch..."
+              git apply "$patch" || echo "Patch failed: $patch"
+            fi
+          done
+        fi
+        
+    - name: Configure V8 build
+      run: |
+        cd v8/v8
+        
+        # Generate build files
+        gn gen out/Release --args='
+          is_debug=false
+          is_component_build=false
+          v8_enable_i18n_support=true
+          v8_use_external_startup_data=true
+          v8_enable_pointer_compression=true
+          v8_enable_31bit_smis_on_64bit_arch=true
+          symbol_level=0
+          use_custom_libcxx=false
+        '
+        
+    - name: Build V8
+      run: |
+        cd v8/v8
+        ninja -C out/Release -j$(nproc)
+        
+    - name: Package V8 artifacts
+      run: |
+        cd v8/v8/out/Release
+        
+        # Package libraries and headers
+        mkdir -p v8-artifacts/{lib,include}
+        
+        # Copy libraries
+        cp -r obj/libv8*.a v8-artifacts/lib/ || true
+        cp -r *.so v8-artifacts/lib/ || true
+        
+        # Copy headers
+        cp -r ../../include/* v8-artifacts/include/
+        
+        # Create tarball
+        tar -czf ../../../v8-build.tar.gz v8-artifacts/
+        
+    - name: Upload V8 artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: v8-engine-build
+        path: v8/v8-build.tar.gz
+        retention-days: 7
+        
+    - name: Create build info
+      run: |
+        cat > v8-build-info.txt << EOF
+        V8 Engine Build
+        ===============
+        Build Date: $(date)
+        Build Number: ${{ github.run_number }}
+        Commit: ${{ github.sha }}
+        
+        Components:
+        - V8 JavaScript Engine
+        - Optimized for performance
+        - Custom patches applied
+        
+        Next Steps:
+        - Build Blink (rendering engine)
+        - Build Content (browser core)
+        - Build Chrome (UI)
+        EOF
+        
+    - name: Upload build info
+      uses: actions/upload-artifact@v4
+      with:
+        name: v8-build-info
+        path: v8-build-info.txt
+        retention-days: 7
