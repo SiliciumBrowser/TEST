@@ -320,17 +320,29 @@ jobs:
     - name: 🚀 Create Launcher
       shell: pwsh
       run: |
-        # Create batch launcher with custom title and user stylesheet
+        # Create batch launcher with ISOLATED user data
         $batch = @'
         @echo off
         title ${{ inputs.browser_name }}
         set DIR=%~dp0
         
-        REM Set custom user data directory
+        REM IMPORTANT: Use isolated user data directory to avoid conflicts with Chrome
         set USER_DATA_DIR=%DIR%UserData
+        
+        REM Create user data directory if not exists
+        if not exist "%USER_DATA_DIR%" mkdir "%USER_DATA_DIR%"
+        
+        echo ========================================
+        echo ${{ inputs.browser_name }}
+        echo ========================================
+        echo User Data: %USER_DATA_DIR%
+        echo This browser is ISOLATED from your Chrome installation
+        echo ========================================
+        echo.
         
         start "${{ inputs.browser_name }}" "%DIR%chrome.exe" ^
           --user-data-dir="%USER_DATA_DIR%" ^
+          --no-default-browser-check ^
           --disable-background-networking ^
           --disable-sync ^
           --disable-translate ^
@@ -348,15 +360,30 @@ jobs:
         
         Set-Content -Path "chromium\launch.bat" -Value $batch
         
-        # Create PowerShell launcher
+        # Create PowerShell launcher with ISOLATED user data
         $ps1 = @'
         $DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
         $Host.UI.RawUI.WindowTitle = "${{ inputs.browser_name }}"
         
+        # IMPORTANT: Use isolated user data directory
         $userDataDir = Join-Path $DIR "UserData"
+        
+        # Create if not exists
+        if (-not (Test-Path $userDataDir)) {
+          New-Item -ItemType Directory -Path $userDataDir | Out-Null
+        }
+        
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "${{ inputs.browser_name }}" -ForegroundColor Green
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host "User Data: $userDataDir" -ForegroundColor Yellow
+        Write-Host "This browser is ISOLATED from your Chrome installation" -ForegroundColor Yellow
+        Write-Host "========================================" -ForegroundColor Cyan
+        Write-Host ""
         
         $flags = @(
           "--user-data-dir=$userDataDir",
+          '--no-default-browser-check',
           '--disable-background-networking',
           '--disable-sync',
           '--disable-translate',
@@ -383,14 +410,59 @@ jobs:
         $Shortcut.TargetPath = "$PSScriptRoot\launch.bat"
         $Shortcut.WorkingDirectory = "$PSScriptRoot"
         $Shortcut.IconLocation = "$PSScriptRoot\chrome.exe,0"
-        $Shortcut.Description = "${{ inputs.browser_name }} - Custom Build"
+        $Shortcut.Description = "${{ inputs.browser_name }} - Custom Build (Isolated)"
         $Shortcut.Save()
         Write-Host "✅ Desktop shortcut created: $env:USERPROFILE\Desktop\${{ inputs.browser_name }}.lnk"
         '@
         
         Set-Content -Path "chromium\create-shortcut.ps1" -Value $shortcut
         
-        Write-Host "✅ Launchers created"
+        # Create README about isolation
+        $isolationInfo = @'
+        # IMPORTANT: Isolated Browser
+        
+        This custom browser is COMPLETELY ISOLATED from your Chrome installation.
+        
+        ## What does this mean?
+        
+        ✅ Separate user data directory (UserData/)
+        ✅ Separate bookmarks, history, passwords
+        ✅ Separate extensions
+        ✅ Separate settings
+        ✅ NO conflicts with Chrome
+        ✅ NO overwriting Chrome settings
+        
+        ## User Data Location
+        
+        All data is stored in: [Browser Folder]\UserData\
+        
+        This includes:
+        - Bookmarks
+        - History
+        - Passwords
+        - Extensions
+        - Settings
+        - Cache
+        - Cookies
+        
+        ## Can I use both?
+        
+        YES! You can use this browser AND Chrome at the same time.
+        They are completely independent.
+        
+        ## Backup
+        
+        To backup your data, simply copy the UserData folder.
+        
+        ## Uninstall
+        
+        To uninstall, simply delete the entire browser folder.
+        Your Chrome installation will NOT be affected.
+        '@
+        
+        Set-Content -Path "chromium\ISOLATION_INFO.txt" -Value $isolationInfo
+        
+        Write-Host "✅ Launchers created with ISOLATED user data"
         
     - name: 📦 Package Build
       shell: pwsh
@@ -399,6 +471,8 @@ jobs:
         $readme = @'
         ${{ inputs.browser_name }}
         ================================
+        
+        IMPORTANT: This browser is ISOLATED from your Chrome installation!
         
         Customizations Applied:
         - ${{ inputs.customizations }}
@@ -413,14 +487,25 @@ jobs:
         2. Or run: launch.ps1
         3. Create desktop shortcut: Right-click create-shortcut.ps1 → Run with PowerShell
         
+        ISOLATION:
+        ----------
+        ✅ Separate user data (UserData/ folder)
+        ✅ NO conflicts with Chrome
+        ✅ NO overwriting Chrome settings
+        ✅ Can run alongside Chrome
+        
         Features:
         ---------
-        ✅ Custom UI Theme
-        ✅ Built-in AdBlock
+        ✅ Custom UI Theme (scrollbar, selection)
+        ✅ Built-in AdBlock (basic)
         ✅ Privacy Enhanced
-        ✅ Pre-installed Extensions
         ✅ Custom Bookmarks
         ✅ DuckDuckGo as default search
+        ✅ Portable (no installation needed)
+        
+        Uninstall:
+        ----------
+        Simply delete this folder. Your Chrome will NOT be affected.
         
         '@
         

@@ -10,13 +10,25 @@ Build trình duyệt Chromium tùy chỉnh hoàn toàn miễn phí với GitHub 
 
 ## ✨ Tính năng
 
-- 🎨 **Custom UI Theme** - Thay đổi màu sắc giao diện
-- 🚫 **AdBlock tích hợp** - Chặn quảng cáo mặc định
+- 🎨 **Custom UI Theme** - Thay đổi màu scrollbar, selection
+- 🚫 **AdBlock tích hợp** - Chặn quảng cáo cơ bản
 - 🔒 **Privacy Enhanced** - Tăng cường bảo mật
-- 🧩 **Pre-installed Extensions** - Cài sẵn extensions
 - 📚 **Custom Bookmarks** - Bookmarks tùy chỉnh
 - 🔍 **Custom Search Engine** - Đổi công cụ tìm kiếm mặc định
 - ⚡ **Performance Optimized** - Tối ưu hiệu suất
+- 🔒 **ISOLATED** - Không xung đột với Chrome gốc
+
+## 🔒 Isolation - Quan trọng!
+
+Browser này hoàn toàn **ISOLATED** khỏi Chrome gốc:
+
+- ✅ User Data riêng (trong folder `UserData/`)
+- ✅ KHÔNG ghi đè settings của Chrome
+- ✅ KHÔNG xung đột bookmarks/extensions
+- ✅ Chạy đồng thời với Chrome được
+- ✅ Xóa browser này KHÔNG ảnh hưởng Chrome gốc
+
+Xem chi tiết: `ISOLATION_EXPLAINED.md`
 
 ## 🚀 Quick Start
 
@@ -55,11 +67,6 @@ Khi chạy workflow, nhập màu hex code:
 2. Lưu vào `custom-resources/icons/logo.png`
 3. Push và chạy lại workflow
 
-### Thêm extensions riêng
-1. Copy thư mục `custom-resources/extensions/example-extension/`
-2. Đổi tên và sửa code
-3. Push và chạy lại
-
 ## 🧪 Test trên Windows
 
 Sau khi tải về và giải nén:
@@ -78,12 +85,14 @@ powershell -ExecutionPolicy Bypass -File test-windows.ps1
 |-----------|--------------|--------------|
 | Thời gian build | 12-15 giờ | 5-10 phút |
 | Chi phí Actions | ~900 phút | ~10 phút |
-| UI tùy chỉnh | ❌ | ✅ |
-| AdBlock | ❌ | ✅ |
+| UI tùy chỉnh | ❌ | ✅ (scrollbar, selection) |
+| AdBlock | ❌ | ✅ (cơ bản) |
 | Privacy | Cơ bản | Nâng cao |
-| Extensions | Tự cài | Pre-installed |
+| Isolation | ❌ | ✅ |
 | Windows support | ✅ | ✅ |
 | Linux support | ✅ | ✅ |
+| Professional | ✅ | ✅ |
+| No warnings | ✅ | ✅ |
 
 ## 💡 Tips
 
@@ -93,6 +102,7 @@ powershell -ExecutionPolicy Bypass -File test-windows.ps1
 - Không cần máy mạnh, GitHub Actions lo hết
 - Windows: Portable, không cần cài đặt
 - Linux: Chạy trực tiếp
+- Không xung đột với Chrome gốc
 
 ## 🐛 Troubleshooting
 
@@ -102,6 +112,8 @@ Xem file `PERMISSIONS_SETUP.md` nếu gặp lỗi 403.
 
 - `QUICK_START.md` - Hướng dẫn nhanh
 - `PERMISSIONS_SETUP.md` - Cấu hình permissions
+- `HOW_IT_WORKS.md` - Giải thích cách hoạt động
+- `ISOLATION_EXPLAINED.md` - Tại sao cần isolation
 - `custom-resources/README.md` - Tùy chỉnh resources
 - `test-windows.bat` / `test-windows.ps1` - Test trên Windows
 
