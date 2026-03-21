@@ -1,89 +1,94 @@
-# 🚀 Quick Start - Build Chromium Nhanh Nhất
+# 🚀 Quick Start - Custom Chromium Builder
 
-## Phương pháp đề xuất: Patch Existing Build
-
-### Bước 1: Push code lên GitHub
+## Bước 1: Push code lên GitHub
 ```bash
 git init
 git add .
-git commit -m "Setup Chromium build"
+git commit -m "Setup custom Chromium builder"
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git push -u origin main
 ```
 
-### Bước 2: Chạy workflow
+## Bước 2: Cấu hình permissions
 1. Vào repository trên GitHub
-2. Click tab **Actions**
-3. Chọn workflow **"Patch Existing Chromium"**
-4. Click **"Run workflow"**
-5. Chọn patches muốn áp dụng
-6. Click **"Run workflow"** (nút xanh)
+2. Click **Settings** → **Actions** → **General**
+3. Chọn **Read and write permissions**
+4. Click **Save**
 
-### Bước 3: Tải kết quả
+## Bước 3: Chạy workflow
+1. Vào tab **Actions**
+2. Chọn **"🎨 Custom Chromium Builder"**
+3. Click **"Run workflow"**
+4. Điền thông tin:
+   - **Customizations**: `ui-theme,adblock,privacy,extensions`
+   - **Theme Color**: `#1a73e8` (hoặc màu bạn thích)
+   - **Browser Name**: `My Custom Browser`
+5. Click **"Run workflow"** (nút xanh)
+
+## Bước 4: Tải kết quả
 Sau 5-10 phút:
 1. Vào tab **Actions**
 2. Click vào workflow run vừa chạy
 3. Scroll xuống phần **Artifacts**
-4. Download file `chromium-patched-*.zip`
+4. Download file `custom-chromium-*.zip`
 
-### Bước 4: Sử dụng
+## Bước 5: Sử dụng
 ```bash
 # Giải nén
-unzip chromium-patched-*.zip
-tar -xzf custom-chromium-patched.tar.gz
+unzip custom-chromium-*.zip
+tar -xzf custom-chromium.tar.gz
 
 # Chạy
 cd chromium
 ./launch.sh
 ```
 
-## Tùy chỉnh nâng cao
+## 🎨 Tùy chỉnh
 
-### Thêm custom logo
-1. Tạo file `custom-resources/icons/product_logo_256.png`
-2. Push lên GitHub
-3. Chạy lại workflow
+### Thay đổi màu theme
+Khi chạy workflow, nhập màu hex code:
+- `#1a73e8` - Xanh Google
+- `#ff0000` - Đỏ
+- `#00ff00` - Xanh lá
+- `#9c27b0` - Tím
 
-### Thêm extensions mặc định
-1. Tạo thư mục `custom-resources/extensions/my-extension/`
-2. Thêm `manifest.json` và code extension
-3. Push lên GitHub
-4. Chạy lại workflow
-
-### Thay đổi homepage mặc định
-1. Tạo file `custom-resources/preferences/master_preferences`
-2. Thêm:
-```json
-{
-  "homepage": "https://your-homepage.com",
-  "homepage_is_newtabpage": false
-}
-```
+### Thêm logo riêng
+1. Tạo logo 256x256 PNG
+2. Thay thế file `custom-resources/icons/logo.png`
 3. Push và chạy lại workflow
 
-## So sánh các phương pháp
+### Thêm extensions riêng
+1. Copy thư mục `custom-resources/extensions/example-extension/`
+2. Đổi tên thành `my-extension`
+3. Sửa `manifest.json` và code
+4. Push và chạy lại
 
-| Phương pháp | Thời gian | Chi phí Actions | Độ tùy chỉnh |
-|-------------|-----------|-----------------|--------------|
-| Patch Existing | 5-10 phút | ~10 phút | Thấp |
-| Rebuild Minimal | 30-60 phút | ~60 phút | Trung bình |
-| Full Build | 12-15 giờ | ~900 phút | Cao |
+### Chọn customizations
+Khi chạy workflow, nhập (cách nhau bởi dấu phẩy):
+- `ui-theme` - Thay đổi màu giao diện
+- `adblock` - Chặn quảng cáo
+- `privacy` - Tăng cường privacy
+- `extensions` - Cài extensions
 
-## Lưu ý
+Hoặc tất cả: `ui-theme,adblock,privacy,extensions`
 
-- GitHub Actions miễn phí: 2,000 phút/tháng
-- Patch Existing: Có thể chạy ~200 lần/tháng
-- Full Build: Chỉ chạy được ~2 lần/tháng
+## 💡 Tips
 
-## Troubleshooting
+- Workflow chỉ mất 5-10 phút
+- Có thể chạy ~200 lần/tháng (miễn phí)
+- Kết quả lưu 30 ngày
+- Không cần máy mạnh, GitHub Actions lo hết
 
-### Lỗi "Artifact not found"
-- Kiểm tra workflow có chạy thành công không
-- Artifacts chỉ lưu 1-30 ngày
+## 🐛 Troubleshooting
 
 ### Lỗi "Permission denied"
-- Đảm bảo đã enable Actions trong Settings → Actions → General
+- Kiểm tra đã cấp quyền Write chưa (Bước 2)
 
-### Build bị timeout
-- Dùng Patch Existing thay vì Full Build
-- Hoặc chia nhỏ components cần rebuild
+### Lỗi "Artifact not found"
+- Đợi workflow chạy xong (5-10 phút)
+- Kiểm tra workflow có lỗi không
+
+### Build bị lỗi
+- Kiểm tra logs trong Actions
+- Thử chạy lại workflow
+

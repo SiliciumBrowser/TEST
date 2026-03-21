@@ -1,24 +1,109 @@
-# Build Chromium với GitHub Actions (Miễn phí)
+# 🎨 Custom Chromium Builder
 
-## 🚀 3 Phương pháp Build (Từ nhanh đến chậm)
+Build trình duyệt Chromium tùy chỉnh hoàn toàn miễn phí với GitHub Actions!
 
-### ⚡ Phương pháp 1: Patch Existing Build (KHUYẾN NGHỊ - 5-10 phút)
-Tải Ungoogled Chromium/Chrome đã build sẵn, chỉ patch/modify theo nhu cầu.
-- ⏱️ Thời gian: 5-10 phút
-- 💰 Chi phí: ~10 phút GitHub Actions
-- ✅ Phù hợp: Thay đổi nhỏ, custom branding, remove features
+## 🖥️ Hỗ trợ nền tảng
 
-### 🔨 Phương pháp 2: Rebuild Minimal Components (30-60 phút)
-Tải base đã build, chỉ rebuild những phần bạn sửa.
-- ⏱️ Thời gian: 30-60 phút
-- 💰 Chi phí: ~60 phút GitHub Actions
-- ✅ Phù hợp: Sửa UI, thêm features nhỏ
+- ✅ **Windows** (x64) - Workflow riêng
+- ✅ **Linux** (x64) - Workflow riêng
+- 🔜 **macOS** (Coming soon)
 
-### 🏗️ Phương pháp 3: Full Build từ Source (12-15 giờ)
-Build toàn bộ từ đầu, chia thành 3 parts.
-- ⏱️ Thời gian: 12-15 giờ
-- 💰 Chi phí: ~900 phút GitHub Actions
-- ✅ Phù hợp: Thay đổi lớn, custom engine
+## ✨ Tính năng
+
+- 🎨 **Custom UI Theme** - Thay đổi màu sắc giao diện
+- 🚫 **AdBlock tích hợp** - Chặn quảng cáo mặc định
+- 🔒 **Privacy Enhanced** - Tăng cường bảo mật
+- 🧩 **Pre-installed Extensions** - Cài sẵn extensions
+- 📚 **Custom Bookmarks** - Bookmarks tùy chỉnh
+- 🔍 **Custom Search Engine** - Đổi công cụ tìm kiếm mặc định
+- ⚡ **Performance Optimized** - Tối ưu hiệu suất
+
+## 🚀 Quick Start
+
+### Windows Users
+
+1. Push code lên GitHub
+2. Vào **Actions** → **"🎨 Custom Chromium Builder (Windows)"**
+3. Click **"Run workflow"**
+4. Điền thông tin và chạy
+5. Tải file `custom-chromium-windows.zip`
+6. Giải nén và chạy `launch.bat`
+
+### Linux Users
+
+1. Push code lên GitHub
+2. Vào **Actions** → **"🎨 Custom Chromium Builder"**
+3. Click **"Run workflow"**
+4. Điền thông tin và chạy
+5. Tải file `custom-chromium.tar.gz`
+6. Giải nén và chạy `./launch.sh`
+
+## 📖 Chi tiết
+
+Xem file `QUICK_START.md` để biết hướng dẫn chi tiết.
+
+## 🎨 Tùy chỉnh
+
+### Thay đổi màu theme
+Khi chạy workflow, nhập màu hex code:
+- `#1a73e8` - Xanh Google
+- `#ff0000` - Đỏ
+- `#9c27b0` - Tím
+
+### Thêm logo riêng
+1. Tạo logo 256x256 PNG
+2. Lưu vào `custom-resources/icons/logo.png`
+3. Push và chạy lại workflow
+
+### Thêm extensions riêng
+1. Copy thư mục `custom-resources/extensions/example-extension/`
+2. Đổi tên và sửa code
+3. Push và chạy lại
+
+## 🧪 Test trên Windows
+
+Sau khi tải về và giải nén:
+
+```cmd
+# Test bằng batch
+test-windows.bat
+
+# Hoặc test bằng PowerShell
+powershell -ExecutionPolicy Bypass -File test-windows.ps1
+```
+
+## 📊 So sánh
+
+| Tính năng | Chromium gốc | Custom Build |
+|-----------|--------------|--------------|
+| Thời gian build | 12-15 giờ | 5-10 phút |
+| Chi phí Actions | ~900 phút | ~10 phút |
+| UI tùy chỉnh | ❌ | ✅ |
+| AdBlock | ❌ | ✅ |
+| Privacy | Cơ bản | Nâng cao |
+| Extensions | Tự cài | Pre-installed |
+| Windows support | ✅ | ✅ |
+| Linux support | ✅ | ✅ |
+
+## 💡 Tips
+
+- Workflow chỉ mất 5-10 phút
+- Có thể chạy ~200 lần/tháng (miễn phí)
+- Kết quả lưu 30 ngày
+- Không cần máy mạnh, GitHub Actions lo hết
+- Windows: Portable, không cần cài đặt
+- Linux: Chạy trực tiếp
+
+## 🐛 Troubleshooting
+
+Xem file `PERMISSIONS_SETUP.md` nếu gặp lỗi 403.
+
+## 📚 Tài liệu
+
+- `QUICK_START.md` - Hướng dẫn nhanh
+- `PERMISSIONS_SETUP.md` - Cấu hình permissions
+- `custom-resources/README.md` - Tùy chỉnh resources
+- `test-windows.bat` / `test-windows.ps1` - Test trên Windows
 
 ## 🚀 Cách sử dụng
 
