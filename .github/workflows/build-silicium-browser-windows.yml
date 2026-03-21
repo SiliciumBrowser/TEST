@@ -181,37 +181,36 @@ jobs:
           $OFFICIAL_BUILD = "is_official_build=true"
         }
         
-        # Generate build configuration
-        $args = @"
-          $BUILD_TYPE
-          $OFFICIAL_BUILD
-          is_component_build=false
-          symbol_level=0
-          enable_nacl=false
-          enable_widevine=true
-          proprietary_codecs=true
-          ffmpeg_branding=\""Chrome\""
-          use_thin_lto=false
-          chrome_pgo_phase=0
-          
-          # Windows specific
-          target_os=\""win\""
-          target_cpu=\""x64\""
-          
-          # Branding
-          is_chrome_branded=false
-          
-          # Optimizations
-          remove_webcore_debug_symbols=true
-          blink_symbol_level=0
-          v8_symbol_level=0
-          
-          # Disable unnecessary features
-          enable_hangout_services_extension=false
-          enable_reporting=false
+        # Create args.gn file
+        $argsContent = @"
+$BUILD_TYPE
+$OFFICIAL_BUILD
+is_component_build=false
+symbol_level=0
+enable_nacl=false
+enable_widevine=true
+proprietary_codecs=true
+ffmpeg_branding="Chrome"
+use_thin_lto=false
+chrome_pgo_phase=0
+
+target_os="win"
+target_cpu="x64"
+
+is_chrome_branded=false
+
+remove_webcore_debug_symbols=true
+blink_symbol_level=0
+v8_symbol_level=0
+
+enable_hangout_services_extension=false
+enable_reporting=false
 "@
         
-        & "$PWD\..\..\depot_tools\gn.bat" gen out\Release --args=$args
+        New-Item -ItemType Directory -Force -Path out\Release
+        Set-Content -Path out\Release\args.gn -Value $argsContent
+        
+        & "$PWD\..\..\depot_tools\gn.bat" gen out\Release
         
     - name: Build SiliciumBrowser
       shell: powershell
