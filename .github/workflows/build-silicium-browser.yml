@@ -240,10 +240,8 @@ jobs:
         
         cd chromium/src/out/Release
         
-        # Create cache directory
         mkdir -p build-cache
         
-        # Copy all .a files (static libraries)
         echo "Copying .a files..."
         find obj -name "*.a" -exec sh -c '
           for file; do
@@ -254,7 +252,6 @@ jobs:
           done
         ' sh {} +
         
-        # Copy critical .o files (not all, too large)
         echo "Copying critical .o files..."
         find obj -name "*.o" | grep -E "(chrome|browser|content|blink|v8)" | while read file; do
           rel_path="${file#obj/}"
@@ -263,30 +260,24 @@ jobs:
           cp "$file" "$target_dir/"
         done
         
-        # Create info file
-        BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
-        RUN_NUMBER="${{ github.run_number }}"
-        BUILD_DATE=$(date)
+        {
+          echo "Build Cache Information"
+          echo "======================="
+          echo "Build Date: $(date)"
+          echo "Build Type: ${{ github.event.inputs.build_type || 'release' }}"
+          echo "Platform: Linux x64"
+          echo "Run Number: ${{ github.run_number }}"
+          echo ""
+          echo "Usage:"
+          echo "1. Extract this archive to chromium/src/out/Release/"
+          echo "2. Apply your patches"
+          echo "3. Run: ninja -C out/Release chrome"
+          echo "4. Only modified files will be rebuilt"
+          echo ""
+          echo "Note: This cache contains compiled object files (.a, .o)"
+          echo "to speed up incremental builds on your local machine."
+        } > build-cache/BUILD_CACHE_INFO.txt
         
-        cat > build-cache/BUILD_CACHE_INFO.txt << 'EOF'
-Build Cache Information
-=======================
-EOF
-        echo "Build Date: $BUILD_DATE" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "Build Type: $BUILD_TYPE" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "Platform: Linux x64" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "Run Number: $RUN_NUMBER" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "Usage:" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "1. Extract this archive to chromium/src/out/Release/" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "2. Apply your patches" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "3. Run: ninja -C out/Release chrome" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "4. Only modified files will be rebuilt" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "Note: This cache contains compiled object files (.a, .o)" >> build-cache/BUILD_CACHE_INFO.txt
-        echo "to speed up incremental builds on your local machine." >> build-cache/BUILD_CACHE_INFO.txt
-        
-        # Create tar.gz
         echo "Creating tar.gz archive..."
         tar -czf ../../../../build-cache-linux.tar.gz -C build-cache .
         
