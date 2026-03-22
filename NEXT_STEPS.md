@@ -74,6 +74,22 @@ Sau đó chạy "Resume Build (Windows)" với số run này.
 - Đã fix tất cả lỗi YAML syntax
 - Nếu vẫn lỗi, check file workflow trên GitHub
 
+### Resume Build Lỗi "Cannot find path"
+**Lỗi này xảy ra khi:**
+- Không có cache từ build trước
+- Số run number sai
+- Cache chưa được tạo (build fail quá sớm)
+
+**Cách sửa:**
+1. Kiểm tra lại số run trước có đúng không
+2. Vào Actions → Run trước → Artifacts
+3. Xem có file `build-cache-windows-{số}` không
+4. Nếu KHÔNG có → Phải chạy "Build SiliciumBrowser (Windows)" trước
+5. Đợi build chạy ít nhất 2-3 giờ để tạo cache
+6. Sau đó mới dùng Resume Build
+
+**Quan trọng:** Resume Build CHỈ hoạt động khi có cache!
+
 ### Không Tìm Thấy Artifacts
 - Chỉ có artifacts nếu build chạy đủ lâu để tạo cache
 - Nếu build fail ngay, sẽ không có artifacts

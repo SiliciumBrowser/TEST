@@ -65,21 +65,51 @@ jobs:
         name: build-cache-windows-${{ github.event.inputs.previous_run_number }}
         path: .
       continue-on-error: true
+      id: download-cache
+      
+    - name: Check cache download
+      shell: powershell
+      run: |
+        if (Test-Path "build-cache-windows.zip") {
+          $size = (Get-Item "build-cache-windows.zip").Length / 1MB
+          Write-Host "✓ Cache downloaded successfully: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "✗ Cache not found or download failed"
+          Write-Host "This workflow requires a previous build cache."
+          Write-Host "Please run 'Build SiliciumBrowser (Windows)' first."
+          exit 1
+        }
         
     - name: Extract build cache
       shell: powershell
       run: |
         if (Test-Path "build-cache-windows.zip") {
           Write-Host "Extracting build cache..."
+          
+          # Ensure output directory exists
+          New-Item -ItemType Directory -Force -Path "chromium\src\out\Release" | Out-Null
+          
+          # Extract cache
           Expand-Archive -Path "build-cache-windows.zip" -DestinationPath "chromium\src\out\Release\" -Force
+          
           Write-Host "Build cache extracted successfully"
           
           # Show cache info
           if (Test-Path "chromium\src\out\Release\BUILD_CACHE_INFO.txt") {
+            Write-Host "`nCache Information:"
             Get-Content "chromium\src\out\Release\BUILD_CACHE_INFO.txt"
           }
+          
+          # Verify extraction
+          if (Test-Path "chromium\src\out\Release\obj") {
+            $objCount = (Get-ChildItem "chromium\src\out\Release\obj" -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
+            Write-Host "`nExtracted $objCount files from cache"
+          } else {
+            Write-Host "`nWarning: No obj directory found in cache"
+          }
         } else {
-          Write-Host "No build cache found, starting fresh build"
+          Write-Host "No build cache found. Will start fresh build."
+          Write-Host "Note: This may take 5-6 hours."
         }
         
     - name: Sync Chromium
@@ -209,24 +239,56 @@ jobs:
       if: always()
       shell: powershell
       run: |
-        Set-Location chromium\src\out\Release
+        Write-Host "Saving updated build cache..."
         
-        New-Item -ItemType Directory -Force -Path build-cache
-        
-        Get-ChildItem -Path obj -Recurse -Filter *.lib | ForEach-Object {
-          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
-          $targetPath = Join-Path "build-cache" $relativePath
-          $targetDir = Split-Path $targetPath -Parent
-          New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-          Copy-Item $_.FullName $targetPath
+        # Check if build directory exists
+        if (-not (Test-Path "chromium\src\out\Release")) {
+          Write-Host "Build directory does not exist. Skipping cache save."
+          exit 0
         }
         
+        # Check if obj directory exists
+        if (-not (Test-Path "chromium\src\out\Release\obj")) {
+          Write-Host "No build artifacts found. Skipping cache save."
+          exit 0
+        }
+        
+        Set-Location chromium\src\out\Release
+        
+        New-Item -ItemType Directory -Force -Path build-cache | Out-Null
+        
+        Write-Host "Copying .lib files..."
+        $libFiles = Get-ChildItem -Path obj -Recurse -Filter *.lib -ErrorAction SilentlyContinue
+        $libCount = 0
+        foreach ($file in $libFiles) {
+          $relativePath = $file.FullName.Substring((Get-Location).Path.Length + 5)
+          $targetPath = Join-Path "build-cache" $relativePath
+          $targetDir = Split-Path $targetPath -Parent
+          New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction SilentlyContinue | Out-Null
+          Copy-Item $file.FullName $targetPath -ErrorAction SilentlyContinue
+          $libCount++
+        }
+        Write-Host "Copied $libCount .lib files"
+        
+        if ($libCount -eq 0) {
+          Write-Host "No artifacts to save. Skipping."
+          exit 0
+        }
+        
+        Write-Host "Creating ZIP archive..."
         Compress-Archive -Path build-cache\* -DestinationPath ..\..\..\..\build-cache-windows-updated.zip -Force
+        
+        if (Test-Path "..\..\..\..\build-cache-windows-updated.zip") {
+          $zipSize = (Get-Item ..\..\..\..\build-cache-windows-updated.zip).Length / 1MB
+          Write-Host "Updated cache created: $([math]::Round($zipSize, 2)) MB"
+        }
     
     - name: Upload updated build cache
       if: always()
       uses: actions/upload-artifact@v4
+      continue-on-error: true
       with:
         name: build-cache-windows-${{ github.run_number }}
         path: build-cache-windows-updated.zip
         retention-days: 30
+        if-no-files-found: ignore

@@ -93,6 +93,18 @@ Nếu build thành công:
 - Dùng "Resume Build" để tiếp tục từ cache
 - Hoặc tải cache về build trên laptop
 
+### Resume Build Lỗi "Cannot find path"
+**Nguyên nhân:** Cache không được tải xuống hoặc không tồn tại
+
+**Giải pháp:**
+1. Kiểm tra số run trước có đúng không
+2. Vào Actions → Run trước → Artifacts → Xem có `build-cache-windows-{số}` không
+3. Nếu không có cache, phải chạy "Build SiliciumBrowser (Windows)" trước
+4. Đợi build chạy ít nhất 2-3 giờ để tạo cache
+5. Sau đó mới dùng "Resume Build"
+
+**Lưu ý:** Resume Build chỉ hoạt động khi có cache từ build trước!
+
 ### Build Hết Dung Lượng Đĩa
 - Workflow tự động dọn dẹp Android SDK, .NET, temp files
 - Nếu vẫn không đủ, liên hệ để tối ưu thêm
