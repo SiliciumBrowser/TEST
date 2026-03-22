@@ -79,6 +79,9 @@ jobs:
         # Save to GITHUB_ENV for subsequent steps
         Add-Content $env:GITHUB_ENV "DEPOT_TOOLS_PATH=$depotToolsPath"
         Add-Content $env:GITHUB_PATH "$depotToolsPath"
+        Add-Content $env:GITHUB_ENV "DEPOT_TOOLS_WIN_TOOLCHAIN=0"
+        
+        Write-Host "Environment variables set for all subsequent steps"
         
     - name: Restore Chromium source cache
       id: cache-chromium
@@ -222,6 +225,8 @@ jobs:
     - name: Verify build environment
       shell: powershell
       run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
         Set-Location chromium\src
         
         Write-Host "Checking build tools..."
@@ -234,14 +239,14 @@ jobs:
         Write-Host "`nPython version:"
         python --version
         
-        Write-Host "`nBuild targets:"
-        gn ls out\Release | Select-String "chrome" | Select-Object -First 10
-        
         Write-Host "`nDisk space:"
         Get-PSDrive C | Select-Object Used,Free
         
         Write-Host "`nMemory:"
         Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory
+        
+        Write-Host "`nEnvironment variables:"
+        Write-Host "DEPOT_TOOLS_WIN_TOOLCHAIN=$env:DEPOT_TOOLS_WIN_TOOLCHAIN"
         
     - name: Build SiliciumBrowser
       shell: powershell
