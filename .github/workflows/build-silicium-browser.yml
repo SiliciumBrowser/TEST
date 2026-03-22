@@ -277,31 +277,26 @@ jobs:
         if [ "$FILE_COUNT" -eq 0 ]; then
           echo "No build artifacts to package. Skipping."
           exit 0
-        fi
         
         BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
         RUN_NUM="${{ github.run_number }}"
         
-        cat > build-cache/BUILD_CACHE_INFO.txt << 'EOF'
-Build Cache Information
-=======================
-EOF
+        echo "Build Cache Information" > build-cache/BUILD_CACHE_INFO.txt
+        echo "=======================" >> build-cache/BUILD_CACHE_INFO.txt
         echo "Build Date: $(date)" >> build-cache/BUILD_CACHE_INFO.txt
         echo "Build Type: $BUILD_TYPE" >> build-cache/BUILD_CACHE_INFO.txt
         echo "Platform: Linux x64" >> build-cache/BUILD_CACHE_INFO.txt
         echo "Run Number: $RUN_NUM" >> build-cache/BUILD_CACHE_INFO.txt
         echo "Artifacts: $FILE_COUNT files" >> build-cache/BUILD_CACHE_INFO.txt
-        cat >> build-cache/BUILD_CACHE_INFO.txt << 'EOF'
-
-Usage:
-1. Extract this archive to chromium/src/out/Release/
-2. Apply your patches
-3. Run: ninja -C out/Release chrome
-4. Only modified files will be rebuilt
-
-Note: This cache contains compiled object files (.a, .o)
-to speed up incremental builds on your local machine.
-EOF
+        echo "" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Usage:" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "1. Extract this archive to chromium/src/out/Release/" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "2. Apply your patches" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "3. Run: ninja -C out/Release chrome" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "4. Only modified files will be rebuilt" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Note: This cache contains compiled object files (.a, .o)" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "to speed up incremental builds on your local machine." >> build-cache/BUILD_CACHE_INFO.txt
         
         echo "Creating tar.gz archive..."
         tar -czf ../../../../build-cache-linux.tar.gz -C build-cache .
