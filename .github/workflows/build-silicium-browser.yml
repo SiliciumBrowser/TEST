@@ -264,23 +264,27 @@ jobs:
         done
         
         # Create info file
-        cat > build-cache/BUILD_CACHE_INFO.txt << EOF
+        BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
+        RUN_NUMBER="${{ github.run_number }}"
+        BUILD_DATE=$(date)
+        
+        cat > build-cache/BUILD_CACHE_INFO.txt << 'EOF'
 Build Cache Information
 =======================
-Build Date: $(date)
-Build Type: ${{ github.event.inputs.build_type || 'release' }}
-Platform: Linux x64
-Run Number: ${{ github.run_number }}
-
-Usage:
-1. Extract this archive to chromium/src/out/Release/
-2. Apply your patches
-3. Run: ninja -C out/Release chrome
-4. Only modified files will be rebuilt
-
-Note: This cache contains compiled object files (.a, .o)
-to speed up incremental builds on your local machine.
 EOF
+        echo "Build Date: $BUILD_DATE" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Build Type: $BUILD_TYPE" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Platform: Linux x64" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Run Number: $RUN_NUMBER" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Usage:" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "1. Extract this archive to chromium/src/out/Release/" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "2. Apply your patches" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "3. Run: ninja -C out/Release chrome" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "4. Only modified files will be rebuilt" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "Note: This cache contains compiled object files (.a, .o)" >> build-cache/BUILD_CACHE_INFO.txt
+        echo "to speed up incremental builds on your local machine." >> build-cache/BUILD_CACHE_INFO.txt
         
         # Create tar.gz
         echo "Creating tar.gz archive..."
