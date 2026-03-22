@@ -65,10 +65,20 @@ jobs:
       shell: powershell
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
-        [Environment]::SetEnvironmentVariable("PATH", "$PWD\depot_tools;$env:PATH", "Process")
+        
+        # Get absolute path
+        $depotToolsPath = (Resolve-Path "depot_tools").Path
+        Write-Host "Depot tools path: $depotToolsPath"
+        
+        # Add to PATH for this session
+        $env:PATH = "$depotToolsPath;$env:PATH"
+        
+        # Set environment variable for depot_tools
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
-        [Environment]::SetEnvironmentVariable("DEPOT_TOOLS_WIN_TOOLCHAIN", "0", "Process")
+        
+        # Save to GITHUB_ENV for subsequent steps
+        Add-Content $env:GITHUB_ENV "DEPOT_TOOLS_PATH=$depotToolsPath"
+        Add-Content $env:GITHUB_PATH "$depotToolsPath"
         
     - name: Restore Chromium source cache
       id: cache-chromium
@@ -85,31 +95,28 @@ jobs:
       if: steps.cache-chromium.outputs.cache-hit != 'true'
       shell: powershell
       run: |
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         
         New-Item -ItemType Directory -Force -Path chromium
         Set-Location chromium
         
-        & "$PWD\..\depot_tools\fetch.bat" --nohooks --no-history chromium
+        fetch --nohooks --no-history chromium
         
     - name: Sync Chromium
       shell: powershell
       run: |
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         
         Set-Location chromium\src
-        & "$PWD\..\..\depot_tools\gclient.bat" sync --no-history --shallow
+        gclient sync --no-history --shallow
         
     - name: Run gclient hooks
       shell: powershell
       run: |
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         
         Set-Location chromium\src
-        & "$PWD\..\..\depot_tools\gclient.bat" runhooks
+        gclient runhooks
         
     - name: Copy custom resources
       shell: powershell
@@ -155,7 +162,6 @@ jobs:
     - name: Configure build
       shell: powershell
       run: |
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         
         Set-Location chromium\src
@@ -191,20 +197,21 @@ jobs:
         
         Set-Content -Path out\Release\args.gn -Value $argsContent
         
-        & "$PWD\..\..\depot_tools\gn.bat" gen out\Release
+        gn gen out\Release
         
     - name: Build SiliciumBrowser
       shell: powershell
       run: |
-        $env:PATH = "$PWD\depot_tools;$env:PATH"
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
         
         Set-Location chromium\src
         
         Write-Host "Starting build at $(Get-Date)"
         Write-Host "Available CPU cores: $env:NUMBER_OF_PROCESSORS"
+        Write-Host "Current directory: $PWD"
         
-        & "$PWD\..\..\depot_tools\ninja.exe" -C out\Release chrome -j $env:NUMBER_OF_PROCESSORS
+        # Use ninja from PATH (depot_tools)
+        ninja -C out\Release chrome -j $env:NUMBER_OF_PROCESSORS
         
         if ($LASTEXITCODE -ne 0) {
           Write-Host "Build failed. Checking disk space..."
