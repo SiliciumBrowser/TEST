@@ -37,7 +37,7 @@ Chúng ta đã thử 2 cách và chọn cách tốt nhất:
 
 ## 🚀 Quick Start
 
-### Build trên GitHub Actions
+### Option 1: Build trên GitHub Actions (Lần đầu)
 
 #### Linux Build
 1. Vào tab **Actions** trong repository
@@ -45,7 +45,9 @@ Chúng ta đã thử 2 cách và chọn cách tốt nhất:
 3. Click **Run workflow**
 4. Chọn build type (release/debug)
 5. Đợi ~5-6 giờ
-6. Download artifact `silicium-browser-linux.tar.gz`
+6. Download 2 artifacts:
+   - `silicium-browser-linux.tar.gz` (browser)
+   - `build-cache-linux-{run}.tar.gz` (cache để build local)
 
 #### Windows Build
 1. Vào tab **Actions** trong repository
@@ -53,7 +55,28 @@ Chúng ta đã thử 2 cách và chọn cách tốt nhất:
 3. Click **Run workflow**
 4. Chọn build type (release/debug)
 5. Đợi ~5-6 giờ
-6. Download artifact `silicium-browser-windows.zip`
+6. Download 2 artifacts:
+   - `silicium-browser-windows.zip` (browser)
+   - `build-cache-windows-{run}.zip` (cache để build local)
+
+### Option 2: Build Local với Cache (Lần sau - Nhanh!)
+
+Sau khi có build cache từ GitHub Actions:
+
+1. Download `build-cache-windows.zip` hoặc `build-cache-linux.tar.gz`
+2. Setup Chromium source local
+3. Extract cache vào `chromium/src/out/Release/`
+4. Sửa code của bạn
+5. Build incremental: `ninja -C out/Release chrome` (chỉ 10-30 phút!)
+
+**Chi tiết**: Xem [LOCAL_BUILD_GUIDE.md](LOCAL_BUILD_GUIDE.md)
+
+### Lợi ích Build Local
+
+- ⚡ **Nhanh**: 10-30 phút thay vì 5-6 giờ
+- 🔧 **Linh hoạt**: Test ngay trên máy
+- 💰 **Tiết kiệm**: Không tốn GitHub Actions minutes
+- 🐛 **Debug**: Dễ dàng debug và fix lỗi
 
 ### Build local (nếu có máy mạnh)
 
@@ -96,21 +119,23 @@ ninja -C out/Release chrome
 ```
 SiliciumBrowser/
 ├── .github/workflows/
-│   └── build-silicium-browser.yml    # GitHub Actions workflow
+│   ├── build-silicium-browser.yml         # Linux build
+│   └── build-silicium-browser-windows.yml # Windows build
 ├── custom-ui/
-│   └── new-tab/                       # Custom new tab page
+│   └── new-tab/                           # Custom new tab page
 │       ├── index.html
 │       ├── style.css
 │       ├── script.js
-│       ├── chrome-polyfill.js         # Chrome API polyfill
+│       ├── chrome-polyfill.js             # Chrome API polyfill
 │       └── ...
 ├── custom-resources/
-│   ├── icons/                         # Custom icons
-│   └── extensions/                    # Custom extensions
-├── patches/                           # Chromium patches
+│   ├── icons/                             # Custom icons
+│   └── extensions/                        # Custom extensions
+├── patches/                               # Chromium patches
 │   └── README.md
-├── custom-patches/                    # Your custom patches
+├── custom-patches/                        # Your custom patches
 │   └── README.md
+├── LOCAL_BUILD_GUIDE.md                   # Hướng dẫn build local
 └── README.md
 ```
 

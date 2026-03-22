@@ -61,7 +61,7 @@ jobs:
         
     - name: Restore Chromium source cache
       id: cache-chromium
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           chromium
@@ -69,6 +69,18 @@ jobs:
         key: chromium-full-source-${{ github.run_number }}
         restore-keys: |
           chromium-full-source-
+    
+    - name: Restore build artifacts cache
+      id: cache-build
+      uses: actions/cache@v4
+      with:
+        path: |
+          chromium/src/out/Release/obj
+          chromium/src/out/Release/*.a
+          chromium/src/out/Release/*.o
+        key: chromium-linux-build-${{ github.run_number }}
+        restore-keys: |
+          chromium-linux-build-
         
     - name: Fetch Chromium source
       if: steps.cache-chromium.outputs.cache-hit != 'true'
@@ -180,6 +192,8 @@ jobs:
         "
         
     - name: Build SiliciumBrowser
+      continue-on-error: true
+      id: build
       run: |
         cd chromium/src
         
@@ -189,14 +203,102 @@ jobs:
         
         # Build chrome target
         ninja -C out/Release chrome -j$(nproc) || {
-          echo "Build failed. Checking disk space..."
+          echo "Build failed or incomplete. Checking disk space..."
           df -h
           exit 1
         }
         
         echo "Build completed at $(date)"
+    
+    - name: Save build artifacts (on timeout or completion)
+      if: always()
+      run: |
+        echo "Saving build artifacts..."
+        
+        if [ -d "chromium/src/out/Release/obj" ]; then
+          OBJ_SIZE=$(du -sh chromium/src/out/Release/obj | cut -f1)
+          echo "Build artifacts size: $OBJ_SIZE"
+        fi
+        
+        echo "Build artifacts will be cached for next run"
+    
+    - name: Upload partial build artifacts
+      if: failure() || cancelled()
+      uses: actions/upload-artifact@v4
+      with:
+        name: partial-build-linux-${{ github.run_number }}
+        path: |
+          chromium/src/out/Release/obj/**/*.a
+          chromium/src/out/Release/obj/**/*.o
+          chromium/src/out/Release/*.a
+        retention-days: 7
+    
+    - name: Package build cache for local development
+      if: always()
+      run: |
+        echo "Creating build cache package..."
+        
+        cd chromium/src/out/Release
+        
+        # Create cache directory
+        mkdir -p build-cache
+        
+        # Copy all .a files (static libraries)
+        echo "Copying .a files..."
+        find obj -name "*.a" -exec sh -c '
+          for file; do
+            rel_path="${file#obj/}"
+            target_dir="build-cache/obj/$(dirname "$rel_path")"
+            mkdir -p "$target_dir"
+            cp "$file" "$target_dir/"
+          done
+        ' sh {} +
+        
+        # Copy critical .o files (not all, too large)
+        echo "Copying critical .o files..."
+        find obj -name "*.o" | grep -E "(chrome|browser|content|blink|v8)" | while read file; do
+          rel_path="${file#obj/}"
+          target_dir="build-cache/obj/$(dirname "$rel_path")"
+          mkdir -p "$target_dir"
+          cp "$file" "$target_dir/"
+        done
+        
+        # Create info file
+        cat > build-cache/BUILD_CACHE_INFO.txt << EOF
+Build Cache Information
+=======================
+Build Date: $(date)
+Build Type: ${{ github.event.inputs.build_type || 'release' }}
+Platform: Linux x64
+Run Number: ${{ github.run_number }}
+
+Usage:
+1. Extract this archive to chromium/src/out/Release/
+2. Apply your patches
+3. Run: ninja -C out/Release chrome
+4. Only modified files will be rebuilt
+
+Note: This cache contains compiled object files (.a, .o)
+to speed up incremental builds on your local machine.
+EOF
+        
+        # Create tar.gz
+        echo "Creating tar.gz archive..."
+        tar -czf ../../../../build-cache-linux.tar.gz -C build-cache .
+        
+        CACHE_SIZE=$(du -h ../../../../build-cache-linux.tar.gz | cut -f1)
+        echo "Build cache size: $CACHE_SIZE"
+    
+    - name: Upload build cache
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-cache-linux-${{ github.run_number }}
+        path: build-cache-linux.tar.gz
+        retention-days: 30
         
     - name: Package SiliciumBrowser
+      if: steps.build.outcome == 'success'
       run: |
         cd chromium/src/out/Release
         
@@ -225,6 +327,7 @@ jobs:
         ls -lh ../../../silicium-browser-linux.tar.gz
         
     - name: Upload build artifacts
+      if: steps.build.outcome == 'success'
       uses: actions/upload-artifact@v4
       with:
         name: silicium-browser-linux-${{ github.event.inputs.build_type || 'release' }}
@@ -232,7 +335,7 @@ jobs:
         retention-days: 30
         
     - name: Create Release
-      if: github.event_name == 'workflow_dispatch'
+      if: steps.build.outcome == 'success' && github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.0-${{ github.run_number }}

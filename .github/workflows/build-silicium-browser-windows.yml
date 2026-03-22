@@ -85,7 +85,7 @@ jobs:
         
     - name: Restore Chromium source cache
       id: cache-chromium
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           chromium
@@ -96,7 +96,7 @@ jobs:
     
     - name: Restore build artifacts cache
       id: cache-build
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           chromium/src/out/Release/obj

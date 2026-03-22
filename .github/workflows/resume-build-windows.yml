@@ -1,0 +1,232 @@
+name: Resume Build (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      previous_run_number:
+        description: 'Previous run number to resume from'
+        required: true
+        type: string
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  resume-build:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Free up disk space
+      shell: powershell
+      run: |
+        Write-Host "Removing unnecessary components..."
+        if (Test-Path "C:\Android") {
+          Remove-Item -Path "C:\Android" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "C:\Program Files\dotnet") {
+          Remove-Item -Path "C:\Program Files\dotnet" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host "Disk space:"
+        Get-PSDrive C | Select-Object Used,Free
+    
+    - name: Setup depot_tools
+      shell: powershell
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        $depotToolsPath = (Resolve-Path "depot_tools").Path
+        Add-Content $env:GITHUB_PATH "$depotToolsPath"
+        Add-Content $env:GITHUB_ENV "DEPOT_TOOLS_WIN_TOOLCHAIN=0"
+        
+    - name: Restore Chromium source
+      uses: actions/cache@v4
+      with:
+        path: |
+          chromium
+          !chromium/src/out
+        key: chromium-windows-source-${{ github.event.inputs.previous_run_number }}
+        restore-keys: |
+          chromium-windows-source-
+        
+    - name: Download previous build cache
+      uses: actions/download-artifact@v4
+      with:
+        name: build-cache-windows-${{ github.event.inputs.previous_run_number }}
+        path: .
+      continue-on-error: true
+        
+    - name: Extract build cache
+      shell: powershell
+      run: |
+        if (Test-Path "build-cache-windows.zip") {
+          Write-Host "Extracting build cache..."
+          Expand-Archive -Path "build-cache-windows.zip" -DestinationPath "chromium\src\out\Release\" -Force
+          Write-Host "Build cache extracted successfully"
+          
+          # Show cache info
+          if (Test-Path "chromium\src\out\Release\BUILD_CACHE_INFO.txt") {
+            Get-Content "chromium\src\out\Release\BUILD_CACHE_INFO.txt"
+          }
+        } else {
+          Write-Host "No build cache found, starting fresh build"
+        }
+        
+    - name: Sync Chromium
+      shell: powershell
+      run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        Set-Location chromium\src
+        gclient sync --no-history --shallow
+        
+    - name: Run gclient hooks
+      shell: powershell
+      run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        Set-Location chromium\src
+        gclient runhooks
+        
+    - name: Copy custom resources
+      shell: powershell
+      run: |
+        if (Test-Path "custom-ui\new-tab") {
+          Write-Host "Copying custom new tab page..."
+          New-Item -ItemType Directory -Force -Path "chromium\src\chrome\browser\resources\silicium_newtab"
+          Copy-Item -Path "custom-ui\new-tab\*" -Destination "chromium\src\chrome\browser\resources\silicium_newtab\" -Recurse -Force
+        }
+        
+    - name: Apply custom patches
+      shell: powershell
+      run: |
+        Set-Location chromium\src
+        if (Test-Path "..\..\patches") {
+          Get-ChildItem "..\..\patches\*.patch" | ForEach-Object {
+            Write-Host "Applying $($_.Name)..."
+            git apply $_.FullName
+          }
+        }
+        if (Test-Path "..\..\custom-patches") {
+          Get-ChildItem "..\..\custom-patches\*.patch" | ForEach-Object {
+            Write-Host "Applying $($_.Name)..."
+            git apply $_.FullName
+          }
+        }
+    
+    - name: Configure build
+      shell: powershell
+      run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        Set-Location chromium\src
+        
+        if ("${{ github.event.inputs.build_type }}" -eq "debug") {
+          $isDebug = "true"
+          $isOfficial = "false"
+        } else {
+          $isDebug = "false"
+          $isOfficial = "true"
+        }
+        
+        New-Item -ItemType Directory -Force -Path out\Release
+        
+        $argsContent = "is_debug=$isDebug`n"
+        $argsContent += "is_official_build=$isOfficial`n"
+        $argsContent += "is_component_build=false`n"
+        $argsContent += "symbol_level=0`n"
+        $argsContent += "enable_nacl=false`n"
+        $argsContent += "proprietary_codecs=true`n"
+        $argsContent += 'ffmpeg_branding="Chrome"' + "`n"
+        $argsContent += "use_thin_lto=false`n"
+        $argsContent += "chrome_pgo_phase=0`n"
+        $argsContent += 'target_os="win"' + "`n"
+        $argsContent += 'target_cpu="x64"' + "`n"
+        $argsContent += "is_chrome_branded=false`n"
+        $argsContent += "remove_webcore_debug_symbols=true`n"
+        $argsContent += "blink_symbol_level=0`n"
+        $argsContent += "v8_symbol_level=0`n"
+        $argsContent += "use_goma=false`n"
+        $argsContent += "concurrent_links=1`n"
+        
+        Set-Content -Path out\Release\args.gn -Value $argsContent
+        gn gen out\Release
+    
+    - name: Resume Build
+      shell: powershell
+      continue-on-error: true
+      id: build
+      timeout-minutes: 330
+      run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        Set-Location chromium\src
+        
+        Write-Host "Resuming build at $(Get-Date)"
+        Write-Host "This will only rebuild modified files"
+        
+        $jobs = 2
+        ninja -C out\Release chrome -j$jobs -v
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "Build incomplete. Exit code: $LASTEXITCODE"
+          exit 1
+        }
+        
+        Write-Host "Build completed at $(Get-Date)"
+    
+    - name: Package SiliciumBrowser
+      if: steps.build.outcome == 'success'
+      shell: powershell
+      run: |
+        Set-Location chromium\src\out\Release
+        
+        New-Item -ItemType Directory -Force -Path silicium-browser
+        
+        Copy-Item chrome.exe silicium-browser\silicium-browser.exe
+        Copy-Item -Recurse locales silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item *.pak silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item *.dll silicium-browser\ -ErrorAction SilentlyContinue
+        Copy-Item icudtl.dat silicium-browser\ -ErrorAction SilentlyContinue
+        
+        Compress-Archive -Path silicium-browser\* -DestinationPath ..\..\..\..\silicium-browser-windows.zip -Force
+        
+    - name: Upload browser
+      if: steps.build.outcome == 'success'
+      uses: actions/upload-artifact@v4
+      with:
+        name: silicium-browser-windows-resumed-${{ github.run_number }}
+        path: silicium-browser-windows.zip
+        retention-days: 30
+    
+    - name: Save updated build cache
+      if: always()
+      shell: powershell
+      run: |
+        Set-Location chromium\src\out\Release
+        
+        New-Item -ItemType Directory -Force -Path build-cache
+        
+        Get-ChildItem -Path obj -Recurse -Filter *.lib | ForEach-Object {
+          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
+          $targetPath = Join-Path "build-cache" $relativePath
+          $targetDir = Split-Path $targetPath -Parent
+          New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
+          Copy-Item $_.FullName $targetPath
+        }
+        
+        Compress-Archive -Path build-cache\* -DestinationPath ..\..\..\..\build-cache-windows-updated.zip -Force
+    
+    - name: Upload updated build cache
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-cache-windows-${{ github.run_number }}
+        path: build-cache-windows-updated.zip
+        retention-days: 30
