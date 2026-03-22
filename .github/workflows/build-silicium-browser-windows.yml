@@ -353,31 +353,56 @@ jobs:
       run: |
         Write-Host "Creating build cache package..."
         
+        # Check if build directory exists
+        if (-not (Test-Path "chromium\src\out\Release")) {
+          Write-Host "Build directory does not exist. Skipping cache packaging."
+          exit 0
+        }
+        
+        # Check if obj directory exists
+        if (-not (Test-Path "chromium\src\out\Release\obj")) {
+          Write-Host "No build artifacts found. Skipping cache packaging."
+          exit 0
+        }
+        
         Set-Location chromium\src\out\Release
         
         # Create cache directory
-        New-Item -ItemType Directory -Force -Path build-cache
+        New-Item -ItemType Directory -Force -Path build-cache | Out-Null
         
         # Copy all .lib files
         Write-Host "Copying .lib files..."
-        Get-ChildItem -Path obj -Recurse -Filter *.lib | ForEach-Object {
-          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
+        $libFiles = Get-ChildItem -Path obj -Recurse -Filter *.lib -ErrorAction SilentlyContinue
+        $libCount = 0
+        foreach ($file in $libFiles) {
+          $relativePath = $file.FullName.Substring((Get-Location).Path.Length + 5)
           $targetPath = Join-Path "build-cache" $relativePath
           $targetDir = Split-Path $targetPath -Parent
-          New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-          Copy-Item $_.FullName $targetPath
+          New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction SilentlyContinue | Out-Null
+          Copy-Item $file.FullName $targetPath -ErrorAction SilentlyContinue
+          $libCount++
         }
+        Write-Host "Copied $libCount .lib files"
         
-        # Copy all .obj files (sample - not all, too large)
+        # Copy critical .obj files
         Write-Host "Copying critical .obj files..."
-        Get-ChildItem -Path obj -Recurse -Filter *.obj | Where-Object {
+        $objFiles = Get-ChildItem -Path obj -Recurse -Filter *.obj -ErrorAction SilentlyContinue | Where-Object {
           $_.FullName -match "(chrome|browser|content|blink|v8)" 
-        } | ForEach-Object {
-          $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
+        }
+        $objCount = 0
+        foreach ($file in $objFiles) {
+          $relativePath = $file.FullName.Substring((Get-Location).Path.Length + 5)
           $targetPath = Join-Path "build-cache" $relativePath
           $targetDir = Split-Path $targetPath -Parent
-          New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-          Copy-Item $_.FullName $targetPath
+          New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction SilentlyContinue | Out-Null
+          Copy-Item $file.FullName $targetPath -ErrorAction SilentlyContinue
+          $objCount++
+        }
+        Write-Host "Copied $objCount .obj files"
+        
+        if ($libCount -eq 0 -and $objCount -eq 0) {
+          Write-Host "No build artifacts to package. Skipping."
+          exit 0
         }
         
         # Create info file
@@ -385,19 +410,25 @@ jobs:
         $runNumber = "${{ github.run_number }}"
         $buildDate = Get-Date
         
-        $buildInfo = "Build Cache Information`n"
-        $buildInfo += "=======================`n"
-        $buildInfo += "Build Date: $buildDate`n"
-        $buildInfo += "Build Type: $buildType`n"
-        $buildInfo += "Platform: Windows x64`n"
-        $buildInfo += "Run Number: $runNumber`n`n"
-        $buildInfo += "Usage:`n"
-        $buildInfo += "1. Extract this archive to chromium/src/out/Release/`n"
-        $buildInfo += "2. Apply your patches`n"
-        $buildInfo += "3. Run: ninja -C out\Release chrome`n"
-        $buildInfo += "4. Only modified files will be rebuilt`n`n"
-        $buildInfo += "Note: This cache contains compiled object files (.lib, .obj)`n"
-        $buildInfo += "to speed up incremental builds on your local machine.`n"
+        $buildInfo = @"
+Build Cache Information
+=======================
+Build Date: $buildDate
+Build Type: $buildType
+Platform: Windows x64
+Run Number: $runNumber
+
+Artifacts: $libCount .lib files, $objCount .obj files
+
+Usage:
+1. Extract this archive to chromium/src/out/Release/
+2. Apply your patches
+3. Run: ninja -C out\Release chrome
+4. Only modified files will be rebuilt
+
+Note: This cache contains compiled object files (.lib, .obj)
+to speed up incremental builds on your local machine.
+"@
         
         Set-Content -Path "build-cache\BUILD_CACHE_INFO.txt" -Value $buildInfo
         
@@ -405,16 +436,22 @@ jobs:
         Write-Host "Creating ZIP archive..."
         Compress-Archive -Path build-cache\* -DestinationPath ..\..\..\..\build-cache-windows.zip -Force
         
-        $zipSize = (Get-Item ..\..\..\..\build-cache-windows.zip).Length / 1MB
-        Write-Host "Build cache size: $([math]::Round($zipSize, 2)) MB"
+        if (Test-Path "..\..\..\..\build-cache-windows.zip") {
+          $zipSize = (Get-Item ..\..\..\..\build-cache-windows.zip).Length / 1MB
+          Write-Host "Build cache created: $([math]::Round($zipSize, 2)) MB"
+        } else {
+          Write-Host "Failed to create build cache ZIP"
+        }
     
     - name: Upload build cache
       if: always()
       uses: actions/upload-artifact@v4
+      continue-on-error: true
       with:
         name: build-cache-windows-${{ github.run_number }}
         path: build-cache-windows.zip
         retention-days: 30
+        if-no-files-found: ignore
         
     - name: Package SiliciumBrowser
       if: steps.build.outcome == 'success'
