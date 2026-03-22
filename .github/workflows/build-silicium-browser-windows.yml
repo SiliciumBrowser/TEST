@@ -376,23 +376,24 @@ jobs:
         }
         
         # Create info file
-        $buildInfo = @"
-Build Cache Information
-=======================
-Build Date: $(Get-Date)
-Build Type: ${{ github.event.inputs.build_type }}
-Platform: Windows x64
-Run Number: ${{ github.run_number }}
-
-Usage:
-1. Extract this archive to chromium/src/out/Release/
-2. Apply your patches
-3. Run: ninja -C out/Release chrome
-4. Only modified files will be rebuilt
-
-Note: This cache contains compiled object files (.lib, .obj)
-to speed up incremental builds on your local machine.
-"@
+        $buildType = "${{ github.event.inputs.build_type }}"
+        $runNumber = "${{ github.run_number }}"
+        $buildDate = Get-Date
+        
+        $buildInfo = "Build Cache Information`n"
+        $buildInfo += "=======================`n"
+        $buildInfo += "Build Date: $buildDate`n"
+        $buildInfo += "Build Type: $buildType`n"
+        $buildInfo += "Platform: Windows x64`n"
+        $buildInfo += "Run Number: $runNumber`n`n"
+        $buildInfo += "Usage:`n"
+        $buildInfo += "1. Extract this archive to chromium/src/out/Release/`n"
+        $buildInfo += "2. Apply your patches`n"
+        $buildInfo += "3. Run: ninja -C out\Release chrome`n"
+        $buildInfo += "4. Only modified files will be rebuilt`n`n"
+        $buildInfo += "Note: This cache contains compiled object files (.lib, .obj)`n"
+        $buildInfo += "to speed up incremental builds on your local machine.`n"
+        
         Set-Content -Path "build-cache\BUILD_CACHE_INFO.txt" -Value $buildInfo
         
         # Create ZIP
