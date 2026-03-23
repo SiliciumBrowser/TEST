@@ -131,6 +131,30 @@ jobs:
           Write-Host "No build cache found. Will start fresh build."
           Write-Host "Note: This may take 5-6 hours."
         }
+    
+    - name: Setup Git config
+      shell: powershell
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.filemode false
+        git config --global core.fscache true
+        git config --global core.preloadindex true
+        git config --global depot-tools.allowGlobalGitConfig true
+        Write-Host "Git config setup completed"
+    
+    - name: Fetch Chromium source (if not cached)
+      shell: powershell
+      run: |
+        $env:DEPOT_TOOLS_WIN_TOOLCHAIN = "0"
+        
+        if (-not (Test-Path "chromium\.gclient")) {
+          Write-Host "Fetching Chromium source..."
+          New-Item -ItemType Directory -Force -Path chromium
+          Set-Location chromium
+          fetch --nohooks --no-history chromium
+        } else {
+          Write-Host "Chromium source already exists"
+        }
         
     - name: Sync Chromium
       shell: powershell
