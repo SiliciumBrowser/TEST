@@ -60,8 +60,10 @@ jobs:
           chromium-windows-source-
         
     - name: Download previous build cache
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v3
       with:
+        workflow: build-silicium-browser-windows.yml
+        run_number: ${{ github.event.inputs.previous_run_number }}
         name: build-cache-windows-${{ github.event.inputs.previous_run_number }}
         path: .
       continue-on-error: true
