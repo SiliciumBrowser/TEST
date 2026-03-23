@@ -72,11 +72,11 @@ jobs:
       run: |
         if (Test-Path "build-cache-windows.zip") {
           $size = (Get-Item "build-cache-windows.zip").Length / 1MB
-          Write-Host "✓ Cache downloaded successfully: $([math]::Round($size, 2)) MB"
+          Write-Host "Cache downloaded successfully: $([math]::Round($size, 2)) MB"
         } else {
-          Write-Host "✗ Cache not found or download failed"
+          Write-Host "Cache not found or download failed"
           Write-Host "This workflow requires a previous build cache."
-          Write-Host "Please run 'Build SiliciumBrowser (Windows)' first."
+          Write-Host "Please run Build SiliciumBrowser (Windows) first."
           exit 1
         }
         
