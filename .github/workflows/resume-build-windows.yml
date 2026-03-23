@@ -3,8 +3,8 @@ name: Resume Build (Windows)
 on:
   workflow_dispatch:
     inputs:
-      previous_run_number:
-        description: 'Previous run number to resume from'
+      artifact_url:
+        description: 'Direct artifact download URL (from GitHub Actions artifacts)'
         required: true
         type: string
       build_type:
@@ -62,50 +62,41 @@ jobs:
     - name: Download previous build cache
       shell: powershell
       run: |
-        Write-Host "Downloading build cache from run ${{ github.event.inputs.previous_run_number }}..."
+        Write-Host "Downloading build cache from provided URL..."
         
-        # Use GitHub CLI to download artifact
-        $runNumber = "${{ github.event.inputs.previous_run_number }}"
-        $artifactName = "build-cache-windows-$runNumber"
+        $url = "${{ github.event.inputs.artifact_url }}"
+        $outputFile = "build-cache-windows.zip"
         
-        Write-Host "Looking for artifact: $artifactName"
+        Write-Host "URL: $url"
+        Write-Host "Output: $outputFile"
         
-        # List all artifacts from the run
-        gh run view $runNumber --repo ${{ github.repository }} --json artifacts --jq '.artifacts[] | "\(.name) - \(.size_in_bytes) bytes"'
-        
-        # Download the artifact
-        gh run download $runNumber --repo ${{ github.repository }} --name $artifactName --dir .
-        
-        Write-Host "Download completed"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      continue-on-error: true
+        # Download using Invoke-WebRequest
+        try {
+          Invoke-WebRequest -Uri $url -OutFile $outputFile -UseBasicParsing
+          Write-Host "Download completed successfully"
+          
+          if (Test-Path $outputFile) {
+            $size = (Get-Item $outputFile).Length / 1MB
+            Write-Host "Downloaded file size: $([math]::Round($size, 2)) MB"
+          }
+        } catch {
+          Write-Host "Download failed: $_"
+          Write-Host "Please check the URL and try again"
+          exit 1
+        }
+      continue-on-error: false
       id: download-cache
-      
-    - name: List downloaded files
-      shell: powershell
-      run: |
-        Write-Host "Files in current directory:"
-        Get-ChildItem . -File | ForEach-Object { Write-Host "  $($_.Name) - $($_.Length / 1MB) MB" }
       
     - name: Check cache download
       shell: powershell
       run: |
-        Write-Host "Checking for build-cache-windows.zip..."
+        Write-Host "Verifying downloaded cache..."
         
         if (Test-Path "build-cache-windows.zip") {
           $size = (Get-Item "build-cache-windows.zip").Length / 1MB
-          Write-Host "Cache downloaded successfully: $([math]::Round($size, 2)) MB"
+          Write-Host "Cache verified: $([math]::Round($size, 2)) MB"
         } else {
-          Write-Host "Cache not found or download failed"
-          Write-Host "This workflow requires a previous build cache."
-          Write-Host ""
-          Write-Host "Troubleshooting:"
-          Write-Host "1. Check that run number ${{ github.event.inputs.previous_run_number }} exists"
-          Write-Host "2. Check that it has artifact: build-cache-windows-${{ github.event.inputs.previous_run_number }}"
-          Write-Host "3. Go to: https://github.com/${{ github.repository }}/actions"
-          Write-Host ""
-          Write-Host "Please run Build SiliciumBrowser (Windows) first to create cache."
+          Write-Host "ERROR: Cache file not found after download"
           exit 1
         }
         
