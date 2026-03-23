@@ -60,12 +60,25 @@ jobs:
           chromium-windows-source-
         
     - name: Download previous build cache
-      uses: dawidd6/action-download-artifact@v3
-      with:
-        workflow: build-silicium-browser-windows.yml
-        run_number: ${{ github.event.inputs.previous_run_number }}
-        name: build-cache-windows-${{ github.event.inputs.previous_run_number }}
-        path: .
+      shell: powershell
+      run: |
+        Write-Host "Downloading build cache from run ${{ github.event.inputs.previous_run_number }}..."
+        
+        # Use GitHub CLI to download artifact
+        $runNumber = "${{ github.event.inputs.previous_run_number }}"
+        $artifactName = "build-cache-windows-$runNumber"
+        
+        Write-Host "Looking for artifact: $artifactName"
+        
+        # List all artifacts from the run
+        gh run view $runNumber --repo ${{ github.repository }} --json artifacts --jq '.artifacts[] | "\(.name) - \(.size_in_bytes) bytes"'
+        
+        # Download the artifact
+        gh run download $runNumber --repo ${{ github.repository }} --name $artifactName --dir .
+        
+        Write-Host "Download completed"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true
       id: download-cache
       
