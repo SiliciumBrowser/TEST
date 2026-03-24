@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchEngineDropdown = document.getElementById(
     "search-engine-dropdown"
   );
-  const topLinksWidget = document.getElementById("top-right-links-widget"); // <--- thêm dòng này
 
   // DOM Elements - Shortcut Modal
   const addShortcutBtn = document.getElementById("add-shortcut-btn");
@@ -121,19 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // Thêm xử lý widget links
-    if (topLinksWidget) {
-      if (
-        typeof loadedSettings.topLinksEnabled === "boolean"
-          ? loadedSettings.topLinksEnabled
-          : true
-      ) {
-        topLinksWidget.classList.remove("hidden");
-      } else {
-        topLinksWidget.classList.add("hidden");
-      }
-    }
-
     shortcutsEnabled =
       typeof loadedSettings.shortcutsEnabled === "boolean"
         ? loadedSettings.shortcutsEnabled
@@ -194,10 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
       initMainDate(mainDateEl, enabled);
     else if (widget === "weather" && typeof initWeatherWidget === "function")
       initWeatherWidget(weatherEl, enabled);
-    else if (widget === "topLinks" && topLinksWidget) {
-      if (enabled) topLinksWidget.classList.remove("hidden");
-      else topLinksWidget.classList.add("hidden");
-    } else if (widget === "shortcuts") {
+    else if (widget === "shortcuts") {
       shortcutsEnabled = enabled;
       updateShortcutsVisibility();
     } else if (widget === "searchHistory") {

@@ -100,36 +100,6 @@ body {
     display: none !important;
 }
 
-#top-right-links-widget {
-    top: 15px;
-    right: 20px;
-    display: flex;
-    gap: 8px;
-    padding: 5px;
-    background-color: var(--background-widget);
-    backdrop-filter: blur(3px);
-}
-
-.top-link-item {
-    color: var(--text-secondary);
-    text-decoration: none;
-    padding: 8px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.top-link-item:hover {
-    background-color: var(--icon-button-hover-bg);
-    color: var(--text-primary);
-}
-
-.top-link-item .material-symbols-outlined {
-    font-size: 22px;
-}
-
 #weather-widget-container {
     top: 15px;
     left: 20px;

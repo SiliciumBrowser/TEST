@@ -259,23 +259,38 @@ jobs:
         Write-Host "Build completed at $(Get-Date)"
     
     - name: Package SiliciumBrowser
-      if: steps.build.outcome == 'success'
       shell: powershell
       run: |
+        Write-Host "Packaging SiliciumBrowser..."
+        
+        if (-not (Test-Path "chromium\src\out\Release\chrome.exe")) {
+          Write-Host "ERROR: chrome.exe not found!"
+          exit 1
+        }
+        
         Set-Location chromium\src\out\Release
         
-        New-Item -ItemType Directory -Force -Path silicium-browser
+        New-Item -ItemType Directory -Force -Path silicium-browser | Out-Null
         
+        Write-Host "Copying files..."
         Copy-Item chrome.exe silicium-browser\silicium-browser.exe
         Copy-Item -Recurse locales silicium-browser\ -ErrorAction SilentlyContinue
         Copy-Item *.pak silicium-browser\ -ErrorAction SilentlyContinue
         Copy-Item *.dll silicium-browser\ -ErrorAction SilentlyContinue
         Copy-Item icudtl.dat silicium-browser\ -ErrorAction SilentlyContinue
         
+        Write-Host "Creating archive..."
         Compress-Archive -Path silicium-browser\* -DestinationPath ..\..\..\..\silicium-browser-windows.zip -Force
         
+        if (Test-Path "..\..\..\..\silicium-browser-windows.zip") {
+          $size = (Get-Item "..\..\..\..\silicium-browser-windows.zip").Length / 1MB
+          Write-Host "Package created: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "ERROR: Failed to create package"
+          exit 1
+        }
+        
     - name: Upload browser
-      if: steps.build.outcome == 'success'
       uses: actions/upload-artifact@v4
       with:
         name: silicium-browser-windows-resumed-${{ github.run_number }}

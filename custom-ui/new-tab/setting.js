@@ -38,7 +38,6 @@ const settingsManager = {
   mainClockToggle: null,
   mainDateToggle: null,
   weatherToggle: null,
-  topLinksToggle: null, // <--- thêm dòng này
   shortcutsToggle: null, // Thêm toggle lối tắt
   clearShortcutsBtn: null, // Nút xóa tất cả lối tắt
   shortcutsRowsInput: null, // Input số hàng
@@ -63,7 +62,6 @@ const settingsManager = {
     weatherEnabled: false,
     searchEngines: { ...DEFAULT_SEARCH_ENGINES },
     selectedSearchEngineKey: "google",
-    topLinksEnabled: true,
     shortcutsEnabled: true, // Thêm bật/tắt lối tắt
     shortcutsRows: 2, // Số hàng mặc định
     shortcutsPerRow: 4, // Số lượng trên một hàng mặc định
@@ -105,7 +103,6 @@ const settingsManager = {
     this.mainClockToggle = document.getElementById("widget-main-clock-toggle");
     this.mainDateToggle = document.getElementById("widget-main-date-toggle");
     this.weatherToggle = document.getElementById("widget-weather-toggle");
-    this.topLinksToggle = document.getElementById("widget-top-links-toggle");
     this.shortcutsToggle = document.getElementById("widget-shortcuts-toggle");
     this.clearShortcutsBtn = document.getElementById("clear-shortcuts-btn");
     this.shortcutsRowsInput = document.getElementById("shortcuts-rows-input");
@@ -146,7 +143,6 @@ const settingsManager = {
           "weatherEnabled",
           "userSearchEngines",
           "selectedSearchEngineKey",
-          "topLinksEnabled",
           "shortcutsEnabled",
           "shortcutsRows",
           "shortcutsPerRow",
@@ -180,10 +176,6 @@ const settingsManager = {
             typeof result.weatherEnabled === "boolean"
               ? result.weatherEnabled
               : false;
-          this.currentSettings.topLinksEnabled =
-            typeof result.topLinksEnabled === "boolean"
-              ? result.topLinksEnabled
-              : true;
           this.currentSettings.shortcutsEnabled =
             typeof result.shortcutsEnabled === "boolean"
               ? result.shortcutsEnabled
@@ -336,8 +328,6 @@ const settingsManager = {
       this.mainDateToggle.checked = this.currentSettings.mainDateEnabled;
     if (this.weatherToggle)
       this.weatherToggle.checked = this.currentSettings.weatherEnabled;
-    if (this.topLinksToggle)
-      this.topLinksToggle.checked = this.currentSettings.topLinksEnabled;
     if (this.shortcutsToggle)
       this.shortcutsToggle.checked = this.currentSettings.shortcutsEnabled;
     if (this.searchHistoryToggle)
@@ -482,15 +472,6 @@ const settingsManager = {
           e.target.checked,
           "widgetToggleChanged",
           { widget: "weather", enabled: e.target.checked }
-        )
-      );
-    if (this.topLinksToggle)
-      this.topLinksToggle.addEventListener("change", (e) =>
-        this.saveSetting(
-          "topLinksEnabled",
-          e.target.checked,
-          "widgetToggleChanged",
-          { widget: "topLinks", enabled: e.target.checked }
         )
       );
     if (this.shortcutsToggle)
