@@ -1,0 +1,196 @@
+name: Build Firefox (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Check disk space
+      shell: powershell
+      run: |
+        Write-Host "Disk space before cleanup:"
+        Get-PSDrive C | Select-Object Used,Free
+    
+    - name: Free up disk space
+      shell: powershell
+      run: |
+        Write-Host "Removing unnecessary components..."
+        
+        if (Test-Path "C:\Android") {
+          Remove-Item -Path "C:\Android" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        if (Test-Path "C:\Program Files\dotnet") {
+          Remove-Item -Path "C:\Program Files\dotnet" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        if (Test-Path "$env:LOCALAPPDATA\Temp") {
+          Remove-Item -Path "$env:LOCALAPPDATA\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        
+        Write-Host "Disk space after cleanup:"
+        Get-PSDrive C | Select-Object Used,Free
+    
+    - name: Install Mozilla Build Tools
+      shell: powershell
+      run: |
+        Write-Host "Downloading MozillaBuild..."
+        $url = "https://ftp.mozilla.org/pub/mozilla/libraries/win32/MozillaBuildSetup-Latest.exe"
+        $output = "MozillaBuildSetup.exe"
+        
+        Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+        
+        Write-Host "Installing MozillaBuild..."
+        Start-Process -FilePath $output -ArgumentList "/S" -Wait
+        
+        Write-Host "MozillaBuild installed"
+    
+    - name: Clone Firefox source
+      shell: powershell
+      run: |
+        Write-Host "Cloning Firefox source..."
+        
+        # Use Mozilla Build environment
+        $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
+        
+        # Clone Firefox
+        git clone --depth 1 https://github.com/mozilla/gecko-dev.git firefox
+        
+        Write-Host "Firefox source cloned"
+    
+    - name: Bootstrap Firefox
+      shell: cmd
+      run: |
+        echo Bootstrapping Firefox...
+        cd firefox
+        C:\mozilla-build\start-shell.bat -c "python3 ./mach bootstrap --application-choice=browser --no-interactive"
+    
+    - name: Create mozconfig
+      shell: powershell
+      run: |
+        Write-Host "Creating mozconfig..."
+        
+        $buildType = "${{ github.event.inputs.build_type }}"
+        
+        if ($buildType -eq "debug") {
+          $config = @"
+ac_add_options --enable-debug
+ac_add_options --disable-optimize
+"@
+        } else {
+          $config = @"
+ac_add_options --enable-optimize
+ac_add_options --disable-debug
+"@
+        }
+        
+        $config += @"
+
+# Build options
+ac_add_options --enable-application=browser
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-firefox
+
+# Branding
+ac_add_options --with-branding=browser/branding/unofficial
+
+# Optimizations
+ac_add_options --disable-tests
+ac_add_options --disable-crashreporter
+ac_add_options --disable-updater
+ac_add_options --disable-maintenance-service
+
+# Features
+ac_add_options --enable-release
+"@
+        
+        Set-Content -Path "firefox\mozconfig" -Value $config
+        
+        Write-Host "mozconfig created:"
+        Get-Content "firefox\mozconfig"
+    
+    - name: Build Firefox
+      shell: cmd
+      timeout-minutes: 180
+      run: |
+        echo Building Firefox...
+        cd firefox
+        C:\mozilla-build\start-shell.bat -c "./mach build"
+    
+    - name: Package Firefox
+      shell: powershell
+      run: |
+        Write-Host "Packaging Firefox..."
+        
+        cd firefox
+        
+        # Run mach package
+        C:\mozilla-build\start-shell.bat -c "./mach package"
+        
+        Write-Host "Firefox packaged"
+    
+    - name: Copy artifacts
+      shell: powershell
+      run: |
+        Write-Host "Copying artifacts..."
+        
+        # Find the package
+        $package = Get-ChildItem -Path "firefox\obj-firefox\dist" -Filter "*.zip" -Recurse | Select-Object -First 1
+        
+        if ($package) {
+          Write-Host "Found package: $($package.Name)"
+          Copy-Item $package.FullName "silicium-browser-firefox.zip"
+          
+          $size = (Get-Item "silicium-browser-firefox.zip").Length / 1MB
+          Write-Host "Package size: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "ERROR: Package not found!"
+          exit 1
+        }
+    
+    - name: Upload Firefox browser
+      uses: actions/upload-artifact@v4
+      with:
+        name: silicium-browser-firefox-${{ github.event.inputs.build_type }}
+        path: silicium-browser-firefox.zip
+        retention-days: 30
+    
+    - name: Create Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: firefox-v1.0.0-${{ github.run_number }}
+        name: SiliciumBrowser Firefox v1.0.0-${{ github.run_number }}
+        body: |
+          ## SiliciumBrowser Firefox Build
+          
+          **Build Type:** ${{ github.event.inputs.build_type }}
+          **Platform:** Windows x64
+          **Based on:** Mozilla Firefox
+          
+          ### Installation
+          1. Extract silicium-browser-firefox.zip
+          2. Run firefox.exe
+        files: silicium-browser-firefox.zip
+        draft: false
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
