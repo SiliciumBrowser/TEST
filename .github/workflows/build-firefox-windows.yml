@@ -121,12 +121,39 @@ jobs:
         Get-Content "firefox\mozconfig"
     
     - name: Build Firefox
-      shell: cmd
+      shell: powershell
       timeout-minutes: 180
       run: |
-        echo Building Firefox...
+        Write-Host "Building Firefox..."
+        Write-Host "This may take 2-3 hours..."
+        
         cd firefox
-        C:\mozilla-build\start-shell.bat -c "./mach build"
+        
+        # Check mozconfig exists
+        if (-not (Test-Path "mozconfig")) {
+          Write-Host "ERROR: mozconfig not found!"
+          exit 1
+        }
+        
+        Write-Host "mozconfig content:"
+        Get-Content mozconfig
+        
+        # Build using mach
+        Write-Host "`nStarting build at $(Get-Date)..."
+        
+        # Use Mozilla Build environment
+        $env:MOZILLABUILD = "C:\mozilla-build"
+        $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
+        
+        # Run mach build
+        python3 mach build
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "ERROR: Build failed with exit code $LASTEXITCODE"
+          exit 1
+        }
+        
+        Write-Host "Build completed at $(Get-Date)"
     
     - name: Package Firefox
       shell: powershell
@@ -135,18 +162,51 @@ jobs:
         
         cd firefox
         
-        # Run mach package
-        C:\mozilla-build\start-shell.bat -c "./mach package"
+        # Check if build completed
+        if (-not (Test-Path "obj-firefox")) {
+          Write-Host "ERROR: obj-firefox directory not found!"
+          Write-Host "Build did not complete successfully."
+          exit 1
+        }
         
-        Write-Host "Firefox packaged"
+        # Use Mozilla Build environment
+        $env:MOZILLABUILD = "C:\mozilla-build"
+        $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
+        
+        # Run mach package
+        Write-Host "Running mach package..."
+        python3 mach package
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Host "ERROR: Package failed with exit code $LASTEXITCODE"
+          exit 1
+        }
+        
+        Write-Host "Firefox packaged successfully"
     
     - name: Copy artifacts
       shell: powershell
       run: |
         Write-Host "Copying artifacts..."
         
+        # Check if build completed
+        if (-not (Test-Path "firefox\obj-firefox")) {
+          Write-Host "ERROR: Build directory obj-firefox not found!"
+          Write-Host "Build may have failed. Check previous step logs."
+          exit 1
+        }
+        
         # Find the package
-        $package = Get-ChildItem -Path "firefox\obj-firefox\dist" -Filter "*.zip" -Recurse | Select-Object -First 1
+        $distPath = "firefox\obj-firefox\dist"
+        
+        if (-not (Test-Path $distPath)) {
+          Write-Host "ERROR: dist directory not found at $distPath"
+          Write-Host "Build did not complete successfully."
+          exit 1
+        }
+        
+        Write-Host "Looking for package in $distPath..."
+        $package = Get-ChildItem -Path $distPath -Filter "*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
         
         if ($package) {
           Write-Host "Found package: $($package.Name)"
@@ -155,7 +215,9 @@ jobs:
           $size = (Get-Item "silicium-browser-firefox.zip").Length / 1MB
           Write-Host "Package size: $([math]::Round($size, 2)) MB"
         } else {
-          Write-Host "ERROR: Package not found!"
+          Write-Host "ERROR: No ZIP package found in $distPath"
+          Write-Host "Available files:"
+          Get-ChildItem $distPath -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $($_.Name)" }
           exit 1
         }
     
