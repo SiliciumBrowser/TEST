@@ -127,6 +127,30 @@ jobs:
         
         Write-Host "cbindgen installed successfully"
     
+    - name: Download Windows Rust crate
+      shell: powershell
+      run: |
+        Write-Host "Downloading Windows Rust crate..."
+        
+        # Install cargo-download if not present
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        cargo install cargo-download
+        
+        # Download windows crate
+        cargo download -x windows=0.58.0
+        
+        # Set environment variable
+        $windowsDir = Get-ChildItem -Directory -Filter "windows-0.58.0" | Select-Object -First 1
+        if ($windowsDir) {
+          $fullPath = $windowsDir.FullName
+          Write-Host "Windows crate downloaded to: $fullPath"
+          echo "MOZ_WINDOWS_RS_DIR=$fullPath" >> $env:GITHUB_ENV
+        } else {
+          Write-Host "ERROR: Windows crate directory not found"
+          exit 1
+        }
+    
     - name: Setup Silicium Branding
       shell: powershell
       run: |
