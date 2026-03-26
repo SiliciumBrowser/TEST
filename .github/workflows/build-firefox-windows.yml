@@ -167,6 +167,8 @@ jobs:
         Write-Host "Copying branding configuration..."
         Copy-Item "custom-resources\branding\configure.sh" "$brandingDir\" -Force
         Copy-Item "custom-resources\branding\branding.nsi" "$brandingDir\" -Force
+        Copy-Item "custom-resources\branding\moz.build" "$brandingDir\" -Force
+        Copy-Item "custom-resources\branding\firefox.VisualElementsManifest.xml" "$brandingDir\" -Force
         
         # Verify configure.sh content
         Write-Host "`nVerifying configure.sh content:"
@@ -174,6 +176,7 @@ jobs:
         
         # Copy locale files
         Write-Host "`nCopying locale files..."
+        Copy-Item "custom-resources\branding\locales\moz.build" "$brandingDir\locales\" -Force
         Copy-Item "custom-resources\branding\locales\en-US\*" "$brandingDir\locales\en-US\" -Force
         Copy-Item "custom-resources\branding\locales\vi\*" "$brandingDir\locales\vi\" -Force
         
