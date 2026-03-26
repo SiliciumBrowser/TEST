@@ -112,6 +112,21 @@ jobs:
         cd firefox
         C:\mozilla-build\start-shell.bat -c "python3 ./mach bootstrap --application-choice=browser --no-interactive"
     
+    - name: Install cbindgen
+      shell: powershell
+      run: |
+        Write-Host "Installing cbindgen..."
+        
+        # Use cargo to install cbindgen
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        cargo install cbindgen
+        
+        # Verify installation
+        cbindgen --version
+        
+        Write-Host "cbindgen installed successfully"
+    
     - name: Setup Silicium Branding
       shell: powershell
       run: |
