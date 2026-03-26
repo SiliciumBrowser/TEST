@@ -198,7 +198,8 @@ jobs:
         $config += "ac_add_options --disable-tests`n"
         $config += "ac_add_options --disable-crashreporter`n"
         $config += "ac_add_options --disable-updater`n"
-        $config += "ac_add_options --disable-maintenance-service`n`n"
+        $config += "ac_add_options --disable-maintenance-service`n"
+        $config += "ac_add_options --without-wasm-sandboxed-libraries`n`n"
         $config += "# Features`n"
         $config += "ac_add_options --enable-release`n"
         
