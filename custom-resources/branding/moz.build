@@ -8,12 +8,12 @@ DIRS += ["locales"]
 
 # Copy branding files to dist/branding
 FINAL_TARGET_FILES.branding += [
+    "default128.png",
     "default16.png",
+    "default256.png",
     "default32.png",
     "default48.png",
     "default64.png",
-    "default128.png",
-    "default256.png",
     "firefox.ico",
 ]
 
