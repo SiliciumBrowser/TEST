@@ -129,8 +129,12 @@ jobs:
         Copy-Item "custom-resources\branding\configure.sh" "$brandingDir\" -Force
         Copy-Item "custom-resources\branding\branding.nsi" "$brandingDir\" -Force
         
+        # Verify configure.sh content
+        Write-Host "`nVerifying configure.sh content:"
+        Get-Content "$brandingDir\configure.sh"
+        
         # Copy locale files
-        Write-Host "Copying locale files..."
+        Write-Host "`nCopying locale files..."
         Copy-Item "custom-resources\branding\locales\en-US\*" "$brandingDir\locales\en-US\" -Force
         Copy-Item "custom-resources\branding\locales\vi\*" "$brandingDir\locales\vi\" -Force
         
