@@ -34,7 +34,8 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "windows":
         "firefox.VisualElementsManifest.xml",
     ]
 
-    FINAL_TARGET_FILES.VisualElements += [
-        "VisualElements_150.png",
-        "VisualElements_70.png",
-    ]
+    # TODO: Add Windows 10/11 tiles later
+    # FINAL_TARGET_FILES.VisualElements += [
+    #     "VisualElements_150.png",
+    #     "VisualElements_70.png",
+    # ]
