@@ -24,6 +24,33 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     
+    - name: Setup cache directories
+      shell: powershell
+      run: |
+        Write-Host "Creating cache directories..."
+        New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.mozbuild" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\mozilla-build" | Out-Null
+        Write-Host "Cache directories created"
+    
+    - name: Cache Mozilla Build dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~\.mozbuild\srcdirs
+          ~\.cargo
+          ~\.rustup
+        key: mozbuild-deps-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          mozbuild-deps-${{ runner.os }}-
+    
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~\.ccache
+        key: ccache-${{ runner.os }}-${{ github.run_number }}
+        restore-keys: |
+          ccache-${{ runner.os }}-
+    
     - name: Check disk space
       shell: powershell
       run: |
@@ -67,15 +94,16 @@ jobs:
     - name: Clone Firefox source
       shell: powershell
       run: |
-        Write-Host "Cloning Firefox source..."
+        Write-Host "Cloning Firefox Release source..."
         
         # Use Mozilla Build environment
         $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
         
-        # Clone Firefox
-        git clone --depth 1 https://github.com/mozilla/gecko-dev.git firefox
+        # Clone Firefox Release (stable) instead of Nightly
+        # mozilla-release = stable release branch
+        git clone --depth 1 --branch release https://github.com/mozilla/gecko-dev.git firefox
         
-        Write-Host "Firefox source cloned"
+        Write-Host "Firefox Release source cloned"
     
     - name: Bootstrap Firefox
       shell: cmd
@@ -83,6 +111,42 @@ jobs:
         echo Bootstrapping Firefox...
         cd firefox
         C:\mozilla-build\start-shell.bat -c "python3 ./mach bootstrap --application-choice=browser --no-interactive"
+    
+    - name: Setup Silicium Branding
+      shell: powershell
+      run: |
+        Write-Host "Setting up Silicium branding..."
+        
+        # Create branding directory
+        $brandingDir = "firefox\browser\branding\silicium"
+        New-Item -ItemType Directory -Force -Path $brandingDir | Out-Null
+        New-Item -ItemType Directory -Force -Path "$brandingDir\locales\en-US" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$brandingDir\locales\vi" | Out-Null
+        New-Item -ItemType Directory -Force -Path "$brandingDir\content" | Out-Null
+        
+        # Copy branding files
+        Write-Host "Copying branding configuration..."
+        Copy-Item "custom-resources\branding\configure.sh" "$brandingDir\" -Force
+        Copy-Item "custom-resources\branding\branding.nsi" "$brandingDir\" -Force
+        
+        # Copy locale files
+        Write-Host "Copying locale files..."
+        Copy-Item "custom-resources\branding\locales\en-US\*" "$brandingDir\locales\en-US\" -Force
+        Copy-Item "custom-resources\branding\locales\vi\*" "$brandingDir\locales\vi\" -Force
+        
+        # Copy icons
+        Write-Host "Copying icons..."
+        Copy-Item "custom-resources\icons\default16.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default32.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default48.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default64.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default128.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default256.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\firefox.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\about.png" "$brandingDir\content\" -Force
+        
+        Write-Host "Silicium branding setup complete!"
+        Write-Host "Branding location: $brandingDir"
     
     - name: Create mozconfig
       shell: powershell
@@ -105,8 +169,12 @@ jobs:
         $config += "# Build options`n"
         $config += "ac_add_options --enable-application=browser`n"
         $config += "mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-firefox`n`n"
-        $config += "# Branding`n"
-        $config += "ac_add_options --with-branding=browser/branding/unofficial`n`n"
+        $config += "# Enable ccache for faster rebuilds`n"
+        $config += "ac_add_options --with-ccache`n"
+        $config += "mk_add_options 'export CCACHE_DIR=$env:USERPROFILE\.ccache'`n`n"
+        $config += "# Silicium custom branding`n"
+        $config += "ac_add_options --with-branding=browser/branding/silicium`n"
+        $config += "ac_add_options --with-app-name=silicium`n`n"
         $config += "# Optimizations`n"
         $config += "ac_add_options --disable-tests`n"
         $config += "ac_add_options --disable-crashreporter`n"
@@ -120,12 +188,32 @@ jobs:
         Write-Host "mozconfig created:"
         Get-Content "firefox\mozconfig"
     
+    - name: Setup ccache
+      shell: powershell
+      run: |
+        Write-Host "Setting up ccache..."
+        
+        # Set ccache environment
+        $env:CCACHE_DIR = "$env:USERPROFILE\.ccache"
+        $env:CCACHE_MAXSIZE = "5G"
+        $env:CCACHE_COMPRESS = "1"
+        
+        # Check if ccache exists in Mozilla Build
+        $ccachePath = "C:\mozilla-build\msys2\usr\bin\ccache.exe"
+        if (Test-Path $ccachePath) {
+          Write-Host "ccache found at $ccachePath"
+          & $ccachePath --version
+          & $ccachePath --show-stats
+        } else {
+          Write-Host "ccache not found, will be installed by bootstrap"
+        }
+    
     - name: Build Firefox
       shell: powershell
       timeout-minutes: 180
       run: |
         Write-Host "Building Firefox..."
-        Write-Host "This may take 2-3 hours..."
+        Write-Host "This may take 2-3 hours (first build) or 30-60 min (cached)..."
         
         cd firefox
         
@@ -145,6 +233,11 @@ jobs:
         $env:MOZILLABUILD = "C:\mozilla-build"
         $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
         
+        # Set ccache environment
+        $env:CCACHE_DIR = "$env:USERPROFILE\.ccache"
+        $env:CCACHE_MAXSIZE = "5G"
+        $env:CCACHE_COMPRESS = "1"
+        
         # Run mach build
         python3 mach build
         
@@ -154,6 +247,13 @@ jobs:
         }
         
         Write-Host "Build completed at $(Get-Date)"
+        
+        # Show ccache stats
+        Write-Host "`nccache statistics:"
+        $ccachePath = "C:\mozilla-build\msys2\usr\bin\ccache.exe"
+        if (Test-Path $ccachePath) {
+          & $ccachePath --show-stats
+        }
     
     - name: Package Firefox
       shell: powershell
@@ -228,10 +328,40 @@ jobs:
           exit 1
         }
     
-    - name: Upload Firefox browser
+    - name: Show cache statistics
+      shell: powershell
+      run: |
+        Write-Host "Build cache statistics:"
+        
+        # ccache stats
+        $ccachePath = "C:\mozilla-build\msys2\usr\bin\ccache.exe"
+        if (Test-Path $ccachePath) {
+          Write-Host "`nccache stats:"
+          & $ccachePath --show-stats
+        }
+        
+        # Cache directory sizes
+        Write-Host "`nCache directory sizes:"
+        
+        if (Test-Path "$env:USERPROFILE\.ccache") {
+          $size = (Get-ChildItem "$env:USERPROFILE\.ccache" -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1GB
+          Write-Host "ccache: $([math]::Round($size, 2)) GB"
+        }
+        
+        if (Test-Path "$env:USERPROFILE\.cargo") {
+          $size = (Get-ChildItem "$env:USERPROFILE\.cargo" -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1GB
+          Write-Host "Cargo: $([math]::Round($size, 2)) GB"
+        }
+        
+        if (Test-Path "$env:USERPROFILE\.mozbuild") {
+          $size = (Get-ChildItem "$env:USERPROFILE\.mozbuild" -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1GB
+          Write-Host "mozbuild: $([math]::Round($size, 2)) GB"
+        }
+    
+    - name: Upload Silicium Browser
       uses: actions/upload-artifact@v4
       with:
-        name: silicium-browser-firefox-${{ github.event.inputs.build_type }}
+        name: silicium-browser-${{ github.event.inputs.build_type }}
         path: silicium-browser-firefox-portable.zip
         retention-days: 30
     
@@ -239,18 +369,31 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: firefox-v1.0.0-${{ github.run_number }}
-        name: SiliciumBrowser Firefox v1.0.0-${{ github.run_number }}
+        tag_name: v1.0.0-${{ github.run_number }}
+        name: Silicium Browser v1.0.0-${{ github.run_number }}
         body: |
-          ## SiliciumBrowser Firefox Build
+          ## 🔥 Silicium Browser - Release Build
           
           **Build Type:** ${{ github.event.inputs.build_type }}
           **Platform:** Windows x64
-          **Based on:** Mozilla Firefox
+          **Based on:** Mozilla Firefox (Release branch)
           
-          ### Installation
-          1. Extract silicium-browser-firefox.zip
-          2. Run firefox.exe
+          ### ✨ Features
+          - 🔥 Custom purple flame branding
+          - 🎨 Silicium name and icons
+          - 🦊 Based on stable Firefox Release
+          
+          ### 📦 Installation
+          1. Download `silicium-browser-firefox-portable.zip`
+          2. Extract to any folder
+          3. Run `firefox.exe` (will be renamed to `silicium.exe` in future builds)
+          
+          ### 🚀 Next Steps
+          - Remove Mozilla tracking
+          - Add privacy features
+          - Implement custom UI
+          
+          **Note:** This is an early build. More features coming soon!
         files: silicium-browser-firefox-portable.zip
         draft: false
         prerelease: true

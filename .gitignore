@@ -4,13 +4,21 @@ chromium-base/
 chromium-prebuilt/
 *.tar.gz
 *.tar.xz
-*.zip
 *.deb
+
+# Firefox build artifacts
+firefox/
+build/
+obj-*/
+dist/
 
 # Build outputs
 out/
 Release/
 Debug/
+
+# Archives (except in releases)
+*.zip
 
 # Depot tools
 depot_tools/
