@@ -35,7 +35,33 @@ Tạo một trình duyệt Firefox-based với:
 
 ---
 
-### 1.2 Anti-Fingerprinting (Mullvad-style)
+### 1.2 Enable Wasm Sandboxed Libraries
+**Priority:** HIGH | **Complexity:** MEDIUM
+
+**Features:**
+- 🔒 Sandbox Graphite font rendering
+- 🔒 Sandbox Hunspell spell checker
+- 🔒 Sandbox OGG audio codec
+- 🔒 Sandbox Expat XML parser
+- 🛡️ Prevent exploit escalation
+
+**Implementation:**
+- Install wasi-sdk in build workflow
+- Enable `--with-wasm-sandboxed-libraries` in mozconfig
+- Test all sandboxed libraries
+- Performance benchmarking
+
+**Status:** ❌ Currently disabled (for simpler initial build)  
+**Timeline:** Week 4-5 of Phase 1
+
+**References:**
+- Guide: `WASM_SANDBOX_GUIDE.md`
+- wasi-sdk: https://github.com/WebAssembly/wasi-sdk
+- RLBox: https://rlbox.dev/
+
+---
+
+### 1.3 Anti-Fingerprinting (Mullvad-style)
 **Priority:** HIGH | **Complexity:** HIGH
 
 **Features:**
@@ -58,7 +84,7 @@ Tạo một trình duyệt Firefox-based với:
 
 ---
 
-### 1.3 Built-in Ad Blocker (Brave-style)
+### 1.4 Built-in Ad Blocker (Brave-style)
 **Priority:** HIGH | **Complexity:** HIGH
 
 **Features:**
@@ -221,8 +247,9 @@ Tạo một trình duyệt Firefox-based với:
 ### Phase 1 (Foundation) - 2-3 months
 1. ✅ Build system setup (DONE)
 2. 🔒 Remove tracking & telemetry
-3. 🛡️ Basic ad blocking
-4. 🎭 Anti-fingerprinting
+3. 🔒 Enable Wasm sandboxed libraries
+4. 🛡️ Basic ad blocking
+5. 🎭 Anti-fingerprinting
 
 ### Phase 2 (UI/UX) - 1-2 months
 1. 🎨 Custom themes
