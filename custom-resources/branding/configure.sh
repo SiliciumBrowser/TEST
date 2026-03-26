@@ -5,14 +5,5 @@
 MOZ_APP_BASENAME=Silicium
 MOZ_APP_DISPLAYNAME=Silicium
 MOZ_APP_NAME=silicium
-
-# Branding
-MOZ_BRANDING_DIRECTORY=browser/branding/silicium
-MOZ_OFFICIAL_BRANDING_DIRECTORY=browser/branding/silicium
-
-# Update
 MOZ_UPDATER=0
 MOZ_UPDATE_CHANNEL=release
-
-# Distribution
-MOZ_DISTRIBUTION_ID=org.siliciumbrowser
