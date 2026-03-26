@@ -1,270 +1,139 @@
-# SiliciumBrowser
+# SiliciumBrowser 🦊
 
-Trình duyệt web tùy chỉnh được build từ Chromium source code với các tính năng độc đáo.
+A customized Firefox-based browser with enhanced privacy and custom UI.
 
-## ✨ Tính năng chính
+## Why Firefox?
 
-- 🎨 **Custom New Tab Page**: Trang new tab với video/GIF backgrounds, widgets, shortcuts
-- 🔒 **Isolated User Data**: Không xung đột với Chrome đã cài
-- 🎯 **Full Customization**: Tùy chỉnh sâu từ source code
-- ⚡ **Performance**: Tối ưu hóa cho hiệu suất cao
+After extensive testing with Chromium (12+ hours of build attempts), we switched to Firefox for:
 
-## 🏗️ Build Strategy
+- ✅ **Faster builds:** 2-3 hours (vs Chromium 5-6 hours)
+- ✅ **Smaller footprint:** ~60GB (vs Chromium ~100GB)
+- ✅ **Easier customization:** Clear structure and tools
+- ✅ **Better reliability:** Fewer timeouts on CI/CD
 
-### Cách tiếp cận
+## Features
 
-Chúng ta đã thử 2 cách và chọn cách tốt nhất:
+- 🎨 Custom new tab page with video backgrounds
+- 🔒 Enhanced privacy settings
+- 🎯 Custom branding and icons
+- ⚡ Optimized build configuration
+- 🛠️ Easy to customize and extend
 
-1. ❌ **Patch Existing Chrome** (Tải Chrome về rồi sửa)
-   - Quá hạn chế, không thể tùy chỉnh sâu
-   - Đã thử và không hoạt động tốt
+## Quick Start
 
-2. ❌ **Component Build** (Build từng phần V8, Blink, Content...)
-   - Quá phức tạp, nhiều lỗi target
-   - Khó tích hợp và tùy chỉnh
+### Build on GitHub Actions
 
-3. ✅ **Full Chromium Build** (Build toàn bộ từ source)
-   - Tùy chỉnh hoàn toàn mọi thứ
-   - Áp dụng patches dễ dàng
-   - Cách DUY NHẤT để có browser thực sự tùy chỉnh
+1. Fork this repository
+2. Go to Actions → "Build Firefox (Windows)"
+3. Click "Run workflow" → Select "release"
+4. Wait 2-3 hours
+5. Download `silicium-browser-firefox` artifact
 
-### GitHub Actions Build
+### Build Locally
 
-- **Thời gian build**: ~5-6 giờ (trong giới hạn 6h của GitHub Actions)
-- **Platform**: Linux x64
-- **Build type**: Release (optimized) hoặc Debug
-- **Tự động**: Trigger manual hoặc theo schedule
+See [LOCAL_BUILD_GUIDE.md](LOCAL_BUILD_GUIDE.md) for detailed instructions.
 
-## 🚀 Quick Start
-
-### Option 1: Build trên GitHub Actions (Lần đầu)
-
-#### Linux Build
-1. Vào tab **Actions** trong repository
-2. Chọn workflow **Build SiliciumBrowser**
-3. Click **Run workflow**
-4. Chọn build type (release/debug)
-5. Đợi ~5-6 giờ
-6. Download 2 artifacts:
-   - `silicium-browser-linux.tar.gz` (browser)
-   - `build-cache-linux-{run}.tar.gz` (cache để build local)
-
-#### Windows Build
-1. Vào tab **Actions** trong repository
-2. Chọn workflow **Build SiliciumBrowser (Windows)**
-3. Click **Run workflow**
-4. Chọn build type (release/debug)
-5. Đợi ~5-6 giờ
-6. Download 2 artifacts:
-   - `silicium-browser-windows.zip` (browser)
-   - `build-cache-windows-{run}.zip` (cache để build local)
-
-### Option 2: Build Local với Cache (Lần sau - Nhanh!)
-
-Sau khi có build cache từ GitHub Actions:
-
-1. Download `build-cache-windows.zip` hoặc `build-cache-linux.tar.gz`
-2. Setup Chromium source local
-3. Extract cache vào `chromium/src/out/Release/`
-4. Sửa code của bạn
-5. Build incremental: `ninja -C out/Release chrome` (chỉ 10-30 phút!)
-
-**Chi tiết**: Xem [LOCAL_BUILD_GUIDE.md](LOCAL_BUILD_GUIDE.md)
-
-### Lợi ích Build Local
-
-- ⚡ **Nhanh**: 10-30 phút thay vì 5-6 giờ
-- 🔧 **Linh hoạt**: Test ngay trên máy
-- 💰 **Tiết kiệm**: Không tốn GitHub Actions minutes
-- 🐛 **Debug**: Dễ dàng debug và fix lỗi
-
-### Build local (nếu có máy mạnh)
-
-```bash
-# Clone repository
-git clone https://github.com/your-username/SiliciumBrowser.git
-cd SiliciumBrowser
-
-# Setup depot_tools
-git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-export PATH="$PWD/depot_tools:$PATH"
-
-# Fetch Chromium source
-mkdir chromium && cd chromium
-fetch --nohooks chromium
-cd src
-
-# Install dependencies (Linux)
-./build/install-build-deps.sh
-
-# Sync and run hooks
-gclient sync
-gclient runhooks
-
-# Copy custom resources
-cp -r ../../custom-ui/new-tab chrome/browser/resources/silicium_newtab/
-
-# Apply patches
-git apply ../../patches/*.patch
-
-# Configure build
-gn gen out/Release --args='is_debug=false is_official_build=true'
-
-# Build (8-12 giờ trên máy thường)
-ninja -C out/Release chrome
-```
-
-## 📁 Cấu trúc dự án
+## Project Structure
 
 ```
 SiliciumBrowser/
 ├── .github/workflows/
-│   ├── build-silicium-browser.yml         # Linux build
-│   └── build-silicium-browser-windows.yml # Windows build
+│   └── build-firefox-windows.yml    # CI/CD workflow
 ├── custom-ui/
-│   └── new-tab/                           # Custom new tab page
-│       ├── index.html
-│       ├── style.css
-│       ├── script.js
-│       ├── chrome-polyfill.js             # Chrome API polyfill
-│       └── ...
+│   └── new-tab/                     # Custom new tab page
 ├── custom-resources/
-│   ├── icons/                             # Custom icons
-│   └── extensions/                        # Custom extensions
-├── patches/                               # Chromium patches
+│   ├── icons/                       # Custom icons
 │   └── README.md
-├── custom-patches/                        # Your custom patches
-│   └── README.md
-├── LOCAL_BUILD_GUIDE.md                   # Hướng dẫn build local
-└── README.md
+├── custom-patches/                  # Firefox patches
+├── README.md                        # This file
+├── QUICK_START.md                   # Quick start guide
+├── FIREFOX_BUILD_GUIDE.md           # Detailed build guide
+└── LOCAL_BUILD_GUIDE.md             # Local build instructions
 ```
 
-## 🎨 Tùy chỉnh
+## Customization
 
-### 1. Custom New Tab Page
+### New Tab Page
 
-File: `custom-ui/new-tab/`
+Edit files in `custom-ui/new-tab/`:
+- `index.html` - Page structure
+- `style.css` - Styling
+- `script.js` - Functionality
 
-Tính năng:
-- Video/GIF/Image backgrounds
-- Customizable clock & date
-- Weather widget
-- Drag-drop shortcuts
-- Multiple search engines
-- Google suggestions
-- Backup/restore settings
+### Branding
 
-### 2. Branding
+Replace files in `custom-resources/`:
+- `icons/logo.png` - Browser icon
+- Update branding in Firefox source
 
-Thay đổi trong patches:
-- Logo và icons
-- Tên browser
-- Màu sắc theme
-- Default settings
+### Build Configuration
 
-### 3. Features
+Edit `mozconfig` settings in the workflow:
+- Optimization level
+- Features to enable/disable
+- Debug vs release build
 
-Thêm/bỏ features qua GN args:
-```python
-enable_nacl=false              # Tắt NaCl
-proprietary_codecs=true        # Bật codecs
-ffmpeg_branding="Chrome"       # Dùng FFmpeg của Chrome
+## Documentation
+
+- [Firefox Build Guide](FIREFOX_BUILD_GUIDE.md) - Complete build instructions
+- [Quick Start](QUICK_START.md) - Get started quickly
+- [Local Build Guide](LOCAL_BUILD_GUIDE.md) - Build on your machine
+- [How It Works](HOW_IT_WORKS.md) - Technical details
+- [Isolation Explained](ISOLATION_EXPLAINED.md) - Privacy features
+
+## Build Timeline
+
+```
+Setup: 30 minutes
+↓
+Bootstrap: 30 minutes
+↓
+Build: 2-3 hours
+↓
+Package: 5 minutes
+↓
+Total: ~3-4 hours
 ```
 
-## 🔧 Patches
+## Requirements
 
-### Tạo patch mới
+### GitHub Actions
+- No local requirements
+- Builds in the cloud
+- Free for public repositories
 
-```bash
-cd chromium/src
+### Local Build
+- Windows 10/11
+- 8GB+ RAM
+- 60GB+ free disk space
+- Visual Studio 2022 Build Tools
+- Mozilla Build Tools
 
-# Sửa code của bạn
-vim chrome/browser/ui/startup/startup_browser_creator.cc
+## Contributing
 
-# Tạo patch
-git diff > ../../custom-patches/my-feature.patch
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test the build
+5. Submit a pull request
 
-### Áp dụng patch
+## License
 
-Patches tự động được áp dụng trong workflow. Hoặc manual:
+This project is based on Mozilla Firefox, which is licensed under the Mozilla Public License 2.0.
 
-```bash
-cd chromium/src
-git apply ../../custom-patches/my-feature.patch
-```
+Custom modifications are available under the same license.
 
-## 📦 Installation
+## Acknowledgments
 
-### Linux
+- Mozilla Firefox team for the excellent browser engine
+- GitHub Actions for free CI/CD
+- Community contributors
 
-```bash
-# Extract
-tar -xzf silicium-browser-linux.tar.gz
-cd silicium-browser
+## Support
 
-# Run
-./silicium-browser
-```
+- Issues: [GitHub Issues](https://github.com/YOUR_USERNAME/SiliciumBrowser/issues)
+- Discussions: [GitHub Discussions](https://github.com/YOUR_USERNAME/SiliciumBrowser/discussions)
 
-### Windows
+---
 
-```powershell
-# Extract ZIP file
-# Right-click -> Extract All...
-
-# Run
-cd silicium-browser
-.\silicium-browser.exe
-```
-
-Hoặc double-click vào `silicium-browser.exe`
-
-## 🐛 Troubleshooting
-
-### Build timeout trên GitHub Actions
-
-- Giảm `symbol_level=0`
-- Tắt features không cần: `enable_nacl=false`
-- Dùng `is_component_build=false` (nhỏ hơn)
-
-### Disk space issues
-
-Workflow tự động dọn dẹp:
-- Xóa .NET, PHP, MongoDB...
-- Xóa Android SDK
-- Giải phóng ~30GB
-
-### Build errors
-
-Check logs trong Actions tab. Thường do:
-- Patches không apply được
-- Dependencies thiếu
-- GN args không hợp lệ
-
-## 📊 Build Stats
-
-- **Source code size**: ~30GB
-- **Build output**: ~5GB
-- **Final package**: ~200-300MB (compressed)
-- **Build time**: 5-6 giờ (GitHub Actions)
-- **Build time**: 8-12 giờ (máy thường)
-
-## 🤝 Contributing
-
-1. Fork repository
-2. Tạo branch mới: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -am 'Add my feature'`
-4. Push: `git push origin feature/my-feature`
-5. Tạo Pull Request
-
-## 📝 License
-
-Chromium source code: BSD License
-Custom code: MIT License
-
-## 🔗 Links
-
-- [Chromium Build Instructions](https://chromium.googlesource.com/chromium/src/+/main/docs/linux/build_instructions.md)
-- [GN Build Configuration](https://gn.googlesource.com/gn/+/main/docs/reference.md)
-- [Chromium Patches](https://chromium.googlesource.com/chromium/src/+/main/docs/contributing.md)
+**Built with 🦊 Firefox**

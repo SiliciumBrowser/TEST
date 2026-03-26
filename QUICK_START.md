@@ -1,94 +1,111 @@
-# 🚀 Quick Start - Custom Chromium Builder
+# Quick Start - SiliciumBrowser 🦊
 
-## Bước 1: Push code lên GitHub
+Get your custom Firefox browser running in 3 simple steps!
+
+## Option 1: GitHub Actions (Recommended)
+
+### Step 1: Fork & Setup
 ```bash
-git init
-git add .
-git commit -m "Setup custom Chromium builder"
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
+# Fork this repository on GitHub
+# Clone to your machine
+git clone https://github.com/YOUR_USERNAME/SiliciumBrowser.git
+cd SiliciumBrowser
 ```
 
-## Bước 2: Cấu hình permissions
-1. Vào repository trên GitHub
-2. Click **Settings** → **Actions** → **General**
-3. Chọn **Read and write permissions**
-4. Click **Save**
+### Step 2: Run Build
+1. Go to your repository on GitHub
+2. Click **Actions** tab
+3. Select **"Build Firefox (Windows)"**
+4. Click **"Run workflow"**
+5. Choose **"release"** build type
+6. Click **"Run workflow"** button
 
-## Bước 3: Chạy workflow
-1. Vào tab **Actions**
-2. Chọn **"🎨 Custom Chromium Builder"**
-3. Click **"Run workflow"**
-4. Điền thông tin:
-   - **Customizations**: `ui-theme,adblock,privacy,extensions`
-   - **Theme Color**: `#1a73e8` (hoặc màu bạn thích)
-   - **Browser Name**: `My Custom Browser`
-5. Click **"Run workflow"** (nút xanh)
+### Step 3: Download & Run
+- Wait 2-3 hours for build to complete
+- Download `silicium-browser-firefox-release` artifact
+- Extract ZIP file
+- Run `firefox.exe`
 
-## Bước 4: Tải kết quả
-Sau 5-10 phút:
-1. Vào tab **Actions**
-2. Click vào workflow run vừa chạy
-3. Scroll xuống phần **Artifacts**
-4. Download file `custom-chromium-*.zip`
+**Done!** 🎉
 
-## Bước 5: Sử dụng
-```bash
-# Giải nén
-unzip custom-chromium-*.zip
-tar -xzf custom-chromium.tar.gz
+## Option 2: Local Build
 
-# Chạy
-cd chromium
-./launch.sh
+### Prerequisites
+- Windows 10/11
+- 8GB+ RAM
+- 60GB+ free disk space
+
+### Step 1: Install Tools
+```powershell
+# Download and install Mozilla Build Tools
+# https://ftp.mozilla.org/pub/mozilla/libraries/win32/MozillaBuildSetup-Latest.exe
 ```
 
-## 🎨 Tùy chỉnh
+### Step 2: Clone & Build
+```bash
+# Clone Firefox source
+git clone --depth 1 https://github.com/mozilla/gecko-dev.git firefox
+cd firefox
 
-### Thay đổi màu theme
-Khi chạy workflow, nhập màu hex code:
-- `#1a73e8` - Xanh Google
-- `#ff0000` - Đỏ
-- `#00ff00` - Xanh lá
-- `#9c27b0` - Tím
+# Bootstrap
+python3 ./mach bootstrap --application-choice=browser
 
-### Thêm logo riêng
-1. Tạo logo 256x256 PNG
-2. Thay thế file `custom-resources/icons/logo.png`
-3. Push và chạy lại workflow
+# Build
+./mach build
 
-### Thêm extensions riêng
-1. Copy thư mục `custom-resources/extensions/example-extension/`
-2. Đổi tên thành `my-extension`
-3. Sửa `manifest.json` và code
-4. Push và chạy lại
+# Package
+./mach package
+```
 
-### Chọn customizations
-Khi chạy workflow, nhập (cách nhau bởi dấu phẩy):
-- `ui-theme` - Thay đổi màu giao diện
-- `adblock` - Chặn quảng cáo
-- `privacy` - Tăng cường privacy
-- `extensions` - Cài extensions
+### Step 3: Run
+```bash
+# Find the package in obj-firefox/dist/
+# Extract and run firefox.exe
+```
 
-Hoặc tất cả: `ui-theme,adblock,privacy,extensions`
+## Customization Quick Guide
 
-## 💡 Tips
+### Change New Tab Page
+```bash
+# Edit custom-ui/new-tab/index.html
+# Rebuild to apply changes
+```
 
-- Workflow chỉ mất 5-10 phút
-- Có thể chạy ~200 lần/tháng (miễn phí)
-- Kết quả lưu 30 ngày
-- Không cần máy mạnh, GitHub Actions lo hết
+### Change Icons
+```bash
+# Replace files in custom-resources/icons/
+# Rebuild to apply changes
+```
 
-## 🐛 Troubleshooting
+### Change Branding
+```bash
+# Edit Firefox branding files
+# See FIREFOX_BUILD_GUIDE.md for details
+```
 
-### Lỗi "Permission denied"
-- Kiểm tra đã cấp quyền Write chưa (Bước 2)
+## Troubleshooting
 
-### Lỗi "Artifact not found"
-- Đợi workflow chạy xong (5-10 phút)
-- Kiểm tra workflow có lỗi không
+### Build Failed?
+- Check GitHub Actions logs
+- Look for error messages
+- See [FIREFOX_BUILD_GUIDE.md](FIREFOX_BUILD_GUIDE.md)
 
-### Build bị lỗi
-- Kiểm tra logs trong Actions
-- Thử chạy lại workflow
+### Build Timeout?
+- Firefox builds usually complete in 2-3 hours
+- If timeout, check for errors in logs
+- May need to optimize build settings
 
+### Can't Run Browser?
+- Make sure all DLLs are present
+- Check Windows Defender/Antivirus
+- Run as Administrator if needed
+
+## Next Steps
+
+- Read [FIREFOX_BUILD_GUIDE.md](FIREFOX_BUILD_GUIDE.md) for detailed instructions
+- Customize your browser
+- Share with others!
+
+---
+
+**Need help?** Open an issue on GitHub!

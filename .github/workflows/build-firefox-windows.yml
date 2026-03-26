@@ -173,12 +173,32 @@ jobs:
         $env:MOZILLABUILD = "C:\mozilla-build"
         $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
         
-        # Run mach package
-        Write-Host "Running mach package..."
+        # Create installer package
+        Write-Host "Creating installer package..."
         python3 mach package
         
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "ERROR: Package failed with exit code $LASTEXITCODE"
+        # Also create a portable package manually
+        Write-Host "Creating portable package..."
+        $distPath = "obj-firefox\dist\bin"
+        
+        if (Test-Path $distPath) {
+          Write-Host "Found dist\bin directory"
+          
+          # Create portable folder
+          New-Item -ItemType Directory -Force -Path "..\firefox-portable" | Out-Null
+          
+          # Copy all files
+          Write-Host "Copying browser files..."
+          Copy-Item -Path "$distPath\*" -Destination "..\firefox-portable\" -Recurse -Force
+          
+          # Create portable package
+          Write-Host "Creating ZIP..."
+          Compress-Archive -Path "..\firefox-portable\*" -DestinationPath "..\silicium-browser-firefox-portable.zip" -Force
+          
+          $size = (Get-Item "..\silicium-browser-firefox-portable.zip").Length / 1MB
+          Write-Host "Portable package size: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "ERROR: dist\bin not found at $distPath"
           exit 1
         }
         
@@ -189,35 +209,22 @@ jobs:
       run: |
         Write-Host "Copying artifacts..."
         
-        # Check if build completed
-        if (-not (Test-Path "firefox\obj-firefox")) {
-          Write-Host "ERROR: Build directory obj-firefox not found!"
-          Write-Host "Build may have failed. Check previous step logs."
-          exit 1
-        }
-        
-        # Find the package
-        $distPath = "firefox\obj-firefox\dist"
-        
-        if (-not (Test-Path $distPath)) {
-          Write-Host "ERROR: dist directory not found at $distPath"
-          Write-Host "Build did not complete successfully."
-          exit 1
-        }
-        
-        Write-Host "Looking for package in $distPath..."
-        $package = Get-ChildItem -Path $distPath -Filter "*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
-        
-        if ($package) {
-          Write-Host "Found package: $($package.Name)"
-          Copy-Item $package.FullName "silicium-browser-firefox.zip"
-          
-          $size = (Get-Item "silicium-browser-firefox.zip").Length / 1MB
-          Write-Host "Package size: $([math]::Round($size, 2)) MB"
+        # Check for portable package first
+        if (Test-Path "silicium-browser-firefox-portable.zip") {
+          Write-Host "Found portable package"
+          $size = (Get-Item "silicium-browser-firefox-portable.zip").Length / 1MB
+          Write-Host "Portable package size: $([math]::Round($size, 2)) MB"
         } else {
-          Write-Host "ERROR: No ZIP package found in $distPath"
-          Write-Host "Available files:"
-          Get-ChildItem $distPath -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $($_.Name)" }
+          Write-Host "ERROR: Portable package not found!"
+          
+          # Try to find any package in dist
+          Write-Host "Looking for packages in firefox\obj-firefox\dist..."
+          if (Test-Path "firefox\obj-firefox\dist") {
+            Get-ChildItem "firefox\obj-firefox\dist" -Recurse -File | ForEach-Object {
+              Write-Host "  Found: $($_.FullName) - $([math]::Round($_.Length / 1MB, 2)) MB"
+            }
+          }
+          
           exit 1
         }
     
@@ -225,7 +232,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: silicium-browser-firefox-${{ github.event.inputs.build_type }}
-        path: silicium-browser-firefox.zip
+        path: silicium-browser-firefox-portable.zip
         retention-days: 30
     
     - name: Create Release
@@ -244,7 +251,7 @@ jobs:
           ### Installation
           1. Extract silicium-browser-firefox.zip
           2. Run firefox.exe
-        files: silicium-browser-firefox.zip
+        files: silicium-browser-firefox-portable.zip
         draft: false
         prerelease: true
       env:
