@@ -153,40 +153,30 @@ jobs:
           exit 1
         }
     
-    - name: Install wasi-sdk for Wasm sandboxed libraries
-      shell: powershell
-      run: |
-        Write-Host "Installing wasi-sdk for Wasm sandboxed libraries..."
-        
-        # Download wasi-sdk
-        $wasiVersion = "24"
-        $wasiUrl = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-$wasiVersion/wasi-sdk-$wasiVersion.0-x86_64-windows.tar.gz"
-        $wasiArchive = "wasi-sdk.tar.gz"
-        
-        Write-Host "Downloading wasi-sdk v$wasiVersion..."
-        Invoke-WebRequest -Uri $wasiUrl -OutFile $wasiArchive -UseBasicParsing
-        
-        # Extract using tar (built into Windows 10+)
-        Write-Host "Extracting wasi-sdk..."
-        tar -xzf $wasiArchive
-        
-        # Find extracted directory
-        $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" | Select-Object -First 1
-        if ($wasiDir) {
-          $wasiPath = $wasiDir.FullName
-          Write-Host "wasi-sdk extracted to: $wasiPath"
-          
-          # Set environment variables for Firefox build
-          echo "WASI_SDK_PATH=$wasiPath" >> $env:GITHUB_ENV
-          echo "WASI_SYSROOT=$wasiPath\share\wasi-sysroot" >> $env:GITHUB_ENV
-          
-          Write-Host "wasi-sdk installed successfully!"
-          Write-Host "WASI_SDK_PATH: $wasiPath"
-          Write-Host "WASI_SYSROOT: $wasiPath\share\wasi-sysroot"
-        } else {
-          Write-Host "ERROR: wasi-sdk directory not found"
-          exit 1
-        }
+    # TEMPORARILY DISABLED: Configure timing issue
+    # Firefox runs configure before we can set environment variables
+    # - name: Install wasi-sdk for Wasm sandboxed libraries
+    #   shell: powershell
+    #   run: |
+    #     Write-Host "Installing wasi-sdk for Wasm sandboxed libraries..."
+    #     $wasiVersion = "24"
+    #     $wasiUrl = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-$wasiVersion/wasi-sdk-$wasiVersion.0-x86_64-windows.tar.gz"
+    #     $wasiArchive = "wasi-sdk.tar.gz"
+    #     Write-Host "Downloading wasi-sdk v$wasiVersion..."
+    #     Invoke-WebRequest -Uri $wasiUrl -OutFile $wasiArchive -UseBasicParsing
+    #     Write-Host "Extracting wasi-sdk..."
+    #     tar -xzf $wasiArchive
+    #     $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" | Select-Object -First 1
+    #     if ($wasiDir) {
+    #       $wasiPath = $wasiDir.FullName
+    #       Write-Host "wasi-sdk extracted to: $wasiPath"
+    #       echo "WASI_SDK_PATH=$wasiPath" >> $env:GITHUB_ENV
+    #       echo "WASI_SYSROOT=$wasiPath\share\wasi-sysroot" >> $env:GITHUB_ENV
+    #       Write-Host "wasi-sdk installed successfully!"
+    #     } else {
+    #       Write-Host "ERROR: wasi-sdk directory not found"
+    #       exit 1
+    #     }
     
     
     - name: Setup Silicium Branding
@@ -328,31 +318,14 @@ jobs:
         $env:CCACHE_MAXSIZE = "5G"
         $env:CCACHE_COMPRESS = "1"
         
-        # Set WASI_SYSROOT for Wasm sandboxed libraries
-        $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" -Path ".." | Select-Object -First 1
-        if ($wasiDir) {
-          $wasiPath = $wasiDir.FullName
-          $wasiSysroot = Join-Path $wasiPath "share\wasi-sysroot"
-          $wasiClang = Join-Path $wasiPath "bin\clang.exe"
-          $wasiClangxx = Join-Path $wasiPath "bin\clang++.exe"
-          
-          # Set environment variables BEFORE configure runs
-          $env:WASI_SYSROOT = $wasiSysroot
-          $env:CC_wasm32_wasi = $wasiClang
-          $env:CXX_wasm32_wasi = $wasiClangxx
-          
-          Write-Host "WASI_SYSROOT set to: $env:WASI_SYSROOT"
-          Write-Host "CC_wasm32_wasi set to: $env:CC_wasm32_wasi"
-          Write-Host "CXX_wasm32_wasi set to: $env:CXX_wasm32_wasi"
-          
-          # Add Wasm sandboxed libraries option to mozconfig
-          Add-Content -Path "mozconfig" -Value "`n# Security: Enable Wasm sandboxed libraries"
-          Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=graphite,ogg,hunspell,expat,woff2"
-          
-          Write-Host "Wasm sandboxed libraries ENABLED with wasi-sdk compilers"
-        } else {
-          Write-Host "WARNING: wasi-sdk not found, building without Wasm sandboxed libraries"
-        }
+        # TEMPORARILY DISABLE Wasm sandboxed libraries
+        # Issue: Firefox configure runs before we can set environment variables
+        # System LLVM is incompatible with wasi-sdk
+        # Will investigate alternative solutions later
+        
+        Write-Host "Wasm sandboxed libraries: DISABLED (configure timing issue)"
+        Write-Host "Building without Wasm sandbox for now..."
+        Write-Host "Browser will still work perfectly, just without this security feature"
         
         Write-Host "`nFinal mozconfig content:"
         Get-Content mozconfig

@@ -1,11 +1,13 @@
 # Wasm Sandboxed Libraries Guide 🔒
 
-## ✅ STATUS: ENABLED (FIXED)
+## ⏸️ STATUS: DISABLED (Technical Limitation)
 
-Wasm sandboxed libraries đã được bật và fix thành công!
+Wasm sandboxed libraries tạm thời bị tắt do hạn chế kỹ thuật.
 
-**Giải pháp**: Dùng wasi-sdk compiler thay vì system LLVM  
-**Chi tiết fix**: Xem [WASM_ISSUE_AND_FIX.md](WASM_ISSUE_AND_FIX.md)
+**Vấn đề**: Firefox configure chạy trước khi set environment variables  
+**Ảnh hưởng**: Browser vẫn hoạt động hoàn hảo, chỉ thiếu tính năng bảo mật này  
+**Kế hoạch**: Sẽ research giải pháp khác trong tương lai  
+**Chi tiết**: Xem [WASM_ISSUE_AND_FIX.md](WASM_ISSUE_AND_FIX.md)
 
 ## Tổng quan
 
