@@ -1,11 +1,15 @@
 # Wasm Sandboxed Libraries Guide 🔒
 
+## ✅ STATUS: ENABLED
+
+Wasm sandboxed libraries đã được bật trong build workflow!
+
 ## Tổng quan
 
 Hướng dẫn enable Wasm sandboxed libraries cho Silicium Browser để tăng cường bảo mật.
 
-**Trạng thái hiện tại:** ❌ Disabled (để build đơn giản hơn)  
-**Khuyến nghị:** ✅ Enable trong Phase 1 (Privacy & Security)
+**Trạng thái hiện tại:** ✅ Enabled (wasi-sdk v24 installed)  
+**Khuyến nghị:** ✅ Đã hoàn thành
 
 ---
 

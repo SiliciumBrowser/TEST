@@ -153,6 +153,38 @@ jobs:
           exit 1
         }
     
+    - name: Install wasi-sdk for Wasm sandboxed libraries
+      shell: powershell
+      run: |
+        Write-Host "Installing wasi-sdk for Wasm sandboxed libraries..."
+        
+        # Download wasi-sdk
+        $wasiVersion = "24"
+        $wasiUrl = "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-$wasiVersion/wasi-sdk-$wasiVersion.0-x86_64-windows.tar.gz"
+        $wasiArchive = "wasi-sdk.tar.gz"
+        
+        Write-Host "Downloading wasi-sdk v$wasiVersion..."
+        Invoke-WebRequest -Uri $wasiUrl -OutFile $wasiArchive -UseBasicParsing
+        
+        # Extract using tar (built into Windows 10+)
+        Write-Host "Extracting wasi-sdk..."
+        tar -xzf $wasiArchive
+        
+        # Find extracted directory
+        $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" | Select-Object -First 1
+        if ($wasiDir) {
+          $wasiPath = $wasiDir.FullName
+          Write-Host "wasi-sdk extracted to: $wasiPath"
+          
+          # Set environment variable for Firefox build
+          echo "WASI_SYSROOT=$wasiPath\share\wasi-sysroot" >> $env:GITHUB_ENV
+          
+          Write-Host "wasi-sdk installed successfully!"
+        } else {
+          Write-Host "ERROR: wasi-sdk directory not found"
+          exit 1
+        }
+    
     - name: Setup Silicium Branding
       shell: powershell
       run: |
@@ -227,8 +259,9 @@ jobs:
         $config += "ac_add_options --disable-tests`n"
         $config += "ac_add_options --disable-crashreporter`n"
         $config += "ac_add_options --disable-updater`n"
-        $config += "ac_add_options --disable-maintenance-service`n"
-        $config += "ac_add_options --without-wasm-sandboxed-libraries`n`n"
+        $config += "ac_add_options --disable-maintenance-service`n`n"
+        $config += "# Security: Enable Wasm sandboxed libraries`n"
+        $config += "ac_add_options --with-wasm-sandboxed-libraries`n`n"
         $config += "# Features`n"
         $config += "ac_add_options --enable-release`n"
         

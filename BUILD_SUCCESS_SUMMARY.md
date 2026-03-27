@@ -66,23 +66,24 @@ mingw32-make[3]: *** windows: No such file or directory. Stop.
 
 ## 🔄 Next Steps
 
-### Immediate (Đã sửa trong workflow):
+### Immediate (Đã hoàn thành):
 - [x] Bỏ qua `mach package` error
 - [x] Chỉ tạo portable package
 - [x] Save cache ngay cả khi có lỗi
 - [x] Thêm `if: always()` cho cache steps
+- [x] Enable Wasm sandboxed libraries (wasi-sdk v24)
 
 ### Phase 1 (Tuần tới):
-- [ ] Chạy lại build để test cache
-- [ ] Verify build time giảm xuống ~30-60 phút
+- [ ] Test Wasm sandboxed libraries hoạt động
 - [ ] Switch sang Silicium branding (sau khi có đủ icons)
 - [ ] Test browser trên Windows
+- [ ] Verify security improvements
 
 ### Phase 2 (Sau đó):
 - [ ] Tạo custom icons (document.ico, pbmode.ico)
-- [ ] Enable Wasm sandboxed libraries
 - [ ] Remove Mozilla tracking
 - [ ] Add privacy features
+- [ ] Custom new tab page
 
 ## 📊 Build Statistics
 
