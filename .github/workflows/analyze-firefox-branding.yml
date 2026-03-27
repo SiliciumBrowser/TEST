@@ -110,7 +110,7 @@ jobs:
 
 ## 2. Official Branding Files
 
-``````
+```
 "@
         
         Get-ChildItem browser/branding/official -Recurse -File | ForEach-Object {
@@ -119,11 +119,11 @@ jobs:
         }
         
         $report += @"
-``````
+```
 
 ## 3. moz.build Content
 
-``````python
+```python
 "@
         
         if (Test-Path "browser/branding/official/moz.build") {
@@ -131,11 +131,11 @@ jobs:
         }
         
         $report += @"
-``````
+```
 
 ## 4. configure.sh Content
 
-``````bash
+```bash
 "@
         
         if (Test-Path "browser/branding/official/configure.sh") {
@@ -143,7 +143,7 @@ jobs:
         }
         
         $report += @"
-``````
+```
 
 ## 5. Icon Files
 
