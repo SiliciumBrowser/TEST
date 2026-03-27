@@ -12,7 +12,7 @@ on:
           - release
           - debug
       clear_cache:
-        description: 'Clear build cache'
+        description: 'Clear build cache (skip restore)'
         required: false
         default: false
         type: boolean
@@ -20,6 +20,11 @@ on:
         description: 'Save cache after build'
         required: false
         default: true
+        type: boolean
+      overwrite_cache:
+        description: 'Overwrite old cache (force new cache)'
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -53,15 +58,21 @@ jobs:
         }
         
         if ("${{ github.event.inputs.save_cache }}" -eq "false") {
-          Write-Host "Save cache: NO - Won't overwrite cache" -ForegroundColor Yellow
+          Write-Host "Save cache: NO - Won't save cache" -ForegroundColor Yellow
         } else {
           Write-Host "Save cache: YES - Will save/update cache" -ForegroundColor Green
+        }
+        
+        if ("${{ github.event.inputs.overwrite_cache }}" -eq "true") {
+          Write-Host "Overwrite cache: YES - Force new cache (ignore old)" -ForegroundColor Magenta
+        } else {
+          Write-Host "Overwrite cache: NO - Reuse existing cache" -ForegroundColor Green
         }
         
         Write-Host "========================================`n" -ForegroundColor Cyan
     
     - name: Restore Mozilla Build dependencies cache
-      if: ${{ github.event.inputs.clear_cache != 'true' }}
+      if: ${{ github.event.inputs.clear_cache != 'true' && github.event.inputs.overwrite_cache != 'true' }}
       uses: actions/cache/restore@v4
       id: cache-mozbuild
       with:
@@ -74,7 +85,7 @@ jobs:
           mozbuild-deps-${{ runner.os }}-
     
     - name: Restore ccache
-      if: ${{ github.event.inputs.clear_cache != 'true' }}
+      if: ${{ github.event.inputs.clear_cache != 'true' && github.event.inputs.overwrite_cache != 'true' }}
       uses: actions/cache/restore@v4
       id: cache-ccache
       with:
@@ -282,9 +293,9 @@ jobs:
         $config += "# Enable ccache for faster rebuilds`n"
         $config += "ac_add_options --with-ccache`n"
         $config += "mk_add_options 'export CCACHE_DIR=$env:USERPROFILE\.ccache'`n`n"
-        $config += "# Silicium custom branding`n"
-        $config += "ac_add_options --with-branding=browser/branding/silicium`n"
-        $config += "ac_add_options --with-app-name=silicium`n`n"
+        $config += "# Silicium custom branding (temporarily use official to test)`n"
+        $config += "ac_add_options --with-branding=browser/branding/official`n"
+        $config += "ac_add_options --with-app-name=firefox`n`n"
         $config += "# Optimizations`n"
         $config += "ac_add_options --disable-tests`n"
         $config += "ac_add_options --disable-crashreporter`n"
