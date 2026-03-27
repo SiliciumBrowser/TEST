@@ -176,14 +176,18 @@ jobs:
           $wasiPath = $wasiDir.FullName
           Write-Host "wasi-sdk extracted to: $wasiPath"
           
-          # Set environment variable for Firefox build
+          # Set environment variables for Firefox build
+          echo "WASI_SDK_PATH=$wasiPath" >> $env:GITHUB_ENV
           echo "WASI_SYSROOT=$wasiPath\share\wasi-sysroot" >> $env:GITHUB_ENV
           
           Write-Host "wasi-sdk installed successfully!"
+          Write-Host "WASI_SDK_PATH: $wasiPath"
+          Write-Host "WASI_SYSROOT: $wasiPath\share\wasi-sysroot"
         } else {
           Write-Host "ERROR: wasi-sdk directory not found"
           exit 1
         }
+    
     
     - name: Setup Silicium Branding
       shell: powershell
@@ -327,15 +331,23 @@ jobs:
         # Set WASI_SYSROOT for Wasm sandboxed libraries
         $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" -Path ".." | Select-Object -First 1
         if ($wasiDir) {
-          $wasiSysroot = Join-Path $wasiDir.FullName "share\wasi-sysroot"
+          $wasiPath = $wasiDir.FullName
+          $wasiSysroot = Join-Path $wasiPath "share\wasi-sysroot"
+          $wasiClang = Join-Path $wasiPath "bin\clang.exe"
+          $wasiClangxx = Join-Path $wasiPath "bin\clang++.exe"
+          
           $env:WASI_SYSROOT = $wasiSysroot
           Write-Host "WASI_SYSROOT set to: $env:WASI_SYSROOT"
           
           # Add Wasm sandboxed libraries option to mozconfig
-          # Syntax: --with-wasm-sandboxed-libraries=lib1,lib2,lib3
+          # Use wasi-sdk compilers instead of system LLVM
           Add-Content -Path "mozconfig" -Value "`n# Security: Enable Wasm sandboxed libraries"
           Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=graphite,ogg,hunspell,expat,woff2"
           Add-Content -Path "mozconfig" -Value "mk_add_options 'export WASI_SYSROOT=$wasiSysroot'"
+          Add-Content -Path "mozconfig" -Value "mk_add_options 'export CC_wasm32_wasi=$wasiClang'"
+          Add-Content -Path "mozconfig" -Value "mk_add_options 'export CXX_wasm32_wasi=$wasiClangxx'"
+          
+          Write-Host "Wasm sandboxed libraries ENABLED with wasi-sdk compilers"
         } else {
           Write-Host "WARNING: wasi-sdk not found, building without Wasm sandboxed libraries"
         }
