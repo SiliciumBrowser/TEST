@@ -217,12 +217,18 @@ jobs:
         # Copy icons
         Write-Host "Copying icons..."
         Copy-Item "custom-resources\icons\default16.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default22.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\default24.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\default32.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\default48.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\default64.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\default128.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\default256.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\firefox.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\firefox64.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\document.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\VisualElements_150.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\VisualElements_70.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\about.png" "$brandingDir\content\" -Force
         
         Write-Host "Silicium branding setup complete!"
@@ -252,9 +258,9 @@ jobs:
         $config += "# Enable ccache for faster rebuilds`n"
         $config += "ac_add_options --with-ccache`n"
         $config += "mk_add_options 'export CCACHE_DIR=$env:USERPROFILE\.ccache'`n`n"
-        $config += "# Silicium custom branding (temporarily use official for first successful build)`n"
-        $config += "ac_add_options --with-branding=browser/branding/official`n"
-        $config += "ac_add_options --with-app-name=firefox`n`n"
+        $config += "# Silicium custom branding`n"
+        $config += "ac_add_options --with-branding=browser/branding/silicium`n"
+        $config += "ac_add_options --with-app-name=silicium`n`n"
         $config += "# Optimizations`n"
         $config += "ac_add_options --disable-tests`n"
         $config += "ac_add_options --disable-crashreporter`n"
@@ -367,9 +373,9 @@ jobs:
           
           # Create portable package
           Write-Host "Creating ZIP..."
-          Compress-Archive -Path "..\firefox-portable\*" -DestinationPath "..\silicium-browser-firefox-portable.zip" -Force
+          Compress-Archive -Path "..\firefox-portable\*" -DestinationPath "..\silicium-browser-portable.zip" -Force
           
-          $size = (Get-Item "..\silicium-browser-firefox-portable.zip").Length / 1MB
+          $size = (Get-Item "..\silicium-browser-portable.zip").Length / 1MB
           Write-Host "Portable package size: $([math]::Round($size, 2)) MB"
           Write-Host "Portable package created successfully!"
         } else {
@@ -385,9 +391,9 @@ jobs:
         Write-Host "Copying artifacts..."
         
         # Check for portable package first
-        if (Test-Path "silicium-browser-firefox-portable.zip") {
+        if (Test-Path "silicium-browser-portable.zip") {
           Write-Host "Found portable package"
-          $size = (Get-Item "silicium-browser-firefox-portable.zip").Length / 1MB
+          $size = (Get-Item "silicium-browser-portable.zip").Length / 1MB
           Write-Host "Portable package size: $([math]::Round($size, 2)) MB"
         } else {
           Write-Host "ERROR: Portable package not found!"
@@ -456,7 +462,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: silicium-browser-${{ github.event.inputs.build_type }}
-        path: silicium-browser-firefox-portable.zip
+        path: silicium-browser-portable.zip
         retention-days: 30
         if-no-files-found: warn
     
@@ -479,9 +485,9 @@ jobs:
           - 🦊 Based on stable Firefox Release
           
           ### 📦 Installation
-          1. Download `silicium-browser-firefox-portable.zip`
+          1. Download `silicium-browser-portable.zip`
           2. Extract to any folder
-          3. Run `firefox.exe` (will be renamed to `silicium.exe` in future builds)
+          3. Run `silicium.exe`
           
           ### 🚀 Next Steps
           - Remove Mozilla tracking
@@ -489,7 +495,7 @@ jobs:
           - Implement custom UI
           
           **Note:** This is an early build. More features coming soon!
-        files: silicium-browser-firefox-portable.zip
+        files: silicium-browser-portable.zip
         draft: false
         prerelease: true
         fail_on_unmatched_files: false
