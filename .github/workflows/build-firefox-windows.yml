@@ -11,6 +11,11 @@ on:
         options:
           - release
           - debug
+      clear_cache:
+        description: 'Clear build cache'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -31,8 +36,17 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.mozbuild" | Out-Null
         New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\mozilla-build" | Out-Null
         Write-Host "Cache directories created"
+        
+        if ("${{ github.event.inputs.clear_cache }}" -eq "true") {
+          Write-Host "========================================" -ForegroundColor Yellow
+          Write-Host "CACHE CLEARED - Fresh build" -ForegroundColor Yellow
+          Write-Host "========================================" -ForegroundColor Yellow
+        } else {
+          Write-Host "Using cached build (if available)"
+        }
     
     - name: Restore Mozilla Build dependencies cache
+      if: ${{ github.event.inputs.clear_cache != 'true' }}
       uses: actions/cache/restore@v4
       id: cache-mozbuild
       with:
@@ -45,6 +59,7 @@ jobs:
           mozbuild-deps-${{ runner.os }}-
     
     - name: Restore ccache
+      if: ${{ github.event.inputs.clear_cache != 'true' }}
       uses: actions/cache/restore@v4
       id: cache-ccache
       with:
