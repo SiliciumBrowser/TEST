@@ -32,8 +32,9 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\mozilla-build" | Out-Null
         Write-Host "Cache directories created"
     
-    - name: Cache Mozilla Build dependencies
-      uses: actions/cache@v4
+    - name: Restore Mozilla Build dependencies cache
+      uses: actions/cache/restore@v4
+      id: cache-mozbuild
       with:
         path: |
           ~\.mozbuild\srcdirs
@@ -43,8 +44,9 @@ jobs:
         restore-keys: |
           mozbuild-deps-${{ runner.os }}-
     
-    - name: Cache ccache
-      uses: actions/cache@v4
+    - name: Restore ccache
+      uses: actions/cache/restore@v4
+      id: cache-ccache
       with:
         path: ~\.ccache
         key: ccache-${{ runner.os }}-${{ github.run_number }}
@@ -316,15 +318,7 @@ jobs:
           exit 1
         }
         
-        # Use Mozilla Build environment
-        $env:MOZILLABUILD = "C:\mozilla-build"
-        $env:PATH = "C:\mozilla-build\python3;C:\mozilla-build\msys2\usr\bin;$env:PATH"
-        
-        # Create installer package
-        Write-Host "Creating installer package..."
-        python3 mach package
-        
-        # Also create a portable package manually
+        # Create portable package (skip mach package due to installer issues)
         Write-Host "Creating portable package..."
         $distPath = "obj-firefox\dist\bin"
         
@@ -344,6 +338,7 @@ jobs:
           
           $size = (Get-Item "..\silicium-browser-firefox-portable.zip").Length / 1MB
           Write-Host "Portable package size: $([math]::Round($size, 2)) MB"
+          Write-Host "Portable package created successfully!"
         } else {
           Write-Host "ERROR: dist\bin not found at $distPath"
           exit 1
@@ -376,6 +371,7 @@ jobs:
         }
     
     - name: Show cache statistics
+      if: always()
       shell: powershell
       run: |
         Write-Host "Build cache statistics:"
@@ -405,15 +401,34 @@ jobs:
           Write-Host "mozbuild: $([math]::Round($size, 2)) GB"
         }
     
+    - name: Save ccache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: ~\.ccache
+        key: ccache-${{ runner.os }}-${{ github.run_number }}
+    
+    - name: Save Mozilla Build dependencies cache
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~\.mozbuild\srcdirs
+          ~\.cargo
+          ~\.rustup
+        key: mozbuild-deps-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+    
     - name: Upload Silicium Browser
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: silicium-browser-${{ github.event.inputs.build_type }}
         path: silicium-browser-firefox-portable.zip
         retention-days: 30
+        if-no-files-found: warn
     
     - name: Create Release
-      if: github.event_name == 'workflow_dispatch'
+      if: success() && github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v1.0.0-${{ github.run_number }}
@@ -444,5 +459,6 @@ jobs:
         files: silicium-browser-firefox-portable.zip
         draft: false
         prerelease: true
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

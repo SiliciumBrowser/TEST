@@ -1,0 +1,218 @@
+name: Analyze Firefox Branding
+
+on:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Clone Firefox source (sparse checkout - branding only)
+      shell: powershell
+      run: |
+        Write-Host "Cloning Firefox branding structure..."
+        
+        # Initialize git repo
+        git init firefox-branding
+        cd firefox-branding
+        
+        # Add remote
+        git remote add origin https://github.com/mozilla/gecko-dev.git
+        
+        # Enable sparse checkout
+        git config core.sparseCheckout true
+        
+        # Specify what to checkout
+        @"
+        browser/branding/
+        browser/app/
+        "@ | Out-File -FilePath .git/info/sparse-checkout -Encoding ASCII
+        
+        # Fetch and checkout release branch
+        Write-Host "Fetching release branch..."
+        git fetch --depth 1 origin release
+        git checkout release
+        
+        Write-Host "Firefox branding downloaded!"
+    
+    - name: Analyze branding structure
+      shell: powershell
+      run: |
+        Write-Host "==================================="
+        Write-Host "FIREFOX BRANDING STRUCTURE ANALYSIS"
+        Write-Host "==================================="
+        
+        cd firefox-branding
+        
+        Write-Host "`n1. Available branding folders:"
+        Get-ChildItem browser/branding -Directory | ForEach-Object {
+          Write-Host "  - $($_.Name)"
+        }
+        
+        Write-Host "`n2. Official branding structure:"
+        Get-ChildItem browser/branding/official -Recurse -File | ForEach-Object {
+          $relativePath = $_.FullName.Replace((Get-Location).Path + "\browser\branding\official\", "")
+          Write-Host "  $relativePath"
+        }
+        
+        Write-Host "`n3. Checking moz.build in official branding:"
+        if (Test-Path "browser/branding/official/moz.build") {
+          Write-Host "`n--- browser/branding/official/moz.build ---"
+          Get-Content "browser/branding/official/moz.build"
+        }
+        
+        Write-Host "`n4. Checking configure.sh:"
+        if (Test-Path "browser/branding/official/configure.sh") {
+          Write-Host "`n--- browser/branding/official/configure.sh ---"
+          Get-Content "browser/branding/official/configure.sh"
+        }
+        
+        Write-Host "`n5. Icon files in official branding:"
+        Get-ChildItem browser/branding/official -Filter "*.ico" -Recurse | ForEach-Object {
+          $size = [math]::Round($_.Length / 1KB, 2)
+          Write-Host "  $($_.Name) - $size KB"
+        }
+        
+        Get-ChildItem browser/branding/official -Filter "*.png" -Recurse | ForEach-Object {
+          $size = [math]::Round($_.Length / 1KB, 2)
+          Write-Host "  $($_.Name) - $size KB"
+        }
+        
+        Write-Host "`n6. Checking browser/app for icon references:"
+        if (Test-Path "browser/app/firefox.exe.manifest") {
+          Write-Host "`n--- firefox.exe.manifest ---"
+          Get-Content "browser/app/firefox.exe.manifest" | Select-Object -First 30
+        }
+    
+    - name: Create branding analysis report
+      shell: powershell
+      run: |
+        cd firefox-branding
+        
+        $report = @"
+# Firefox Branding Analysis Report
+
+## Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+
+## 1. Branding Folders
+
+"@
+        
+        Get-ChildItem browser/branding -Directory | ForEach-Object {
+          $report += "- **$($_.Name)**`n"
+        }
+        
+        $report += @"
+
+## 2. Official Branding Files
+
+``````
+"@
+        
+        Get-ChildItem browser/branding/official -Recurse -File | ForEach-Object {
+          $relativePath = $_.FullName.Replace((Get-Location).Path + "\browser\branding\official\", "")
+          $report += "$relativePath`n"
+        }
+        
+        $report += @"
+``````
+
+## 3. moz.build Content
+
+``````python
+"@
+        
+        if (Test-Path "browser/branding/official/moz.build") {
+          $report += Get-Content "browser/branding/official/moz.build" -Raw
+        }
+        
+        $report += @"
+``````
+
+## 4. configure.sh Content
+
+``````bash
+"@
+        
+        if (Test-Path "browser/branding/official/configure.sh") {
+          $report += Get-Content "browser/branding/official/configure.sh" -Raw
+        }
+        
+        $report += @"
+``````
+
+## 5. Icon Files
+
+"@
+        
+        Get-ChildItem browser/branding/official -Filter "*.ico" -Recurse | ForEach-Object {
+          $size = [math]::Round($_.Length / 1KB, 2)
+          $report += "- **$($_.Name)** - $size KB`n"
+        }
+        
+        Get-ChildItem browser/branding/official -Filter "*.png" -Recurse | ForEach-Object {
+          $size = [math]::Round($_.Length / 1KB, 2)
+          $report += "- **$($_.Name)** - $size KB`n"
+        }
+        
+        $report += @"
+
+## 6. Required Files for Windows Build
+
+Based on analysis, these files are REQUIRED:
+
+### Icons
+- firefox.ico (main executable icon)
+- document.ico (document icon)
+- pbmode.ico (private browsing icon)
+- default16.png, default32.png, default48.png (chrome icons)
+- default64.png, default128.png, default256.png (various sizes)
+
+### Configuration
+- moz.build (build configuration)
+- configure.sh (branding variables)
+- branding.nsi (Windows installer)
+
+### Locales
+- locales/en-US/brand.dtd
+- locales/en-US/brand.properties
+
+### Windows 10/11
+- firefox.VisualElementsManifest.xml
+- VisualElements_150.png
+- VisualElements_70.png
+
+## 7. Next Steps for Silicium Branding
+
+1. Create all required .ico files (firefox.ico, document.ico, pbmode.ico)
+2. Create all PNG sizes (16, 32, 48, 64, 128, 256)
+3. Create Windows tiles (150x150, 70x70)
+4. Update moz.build with correct file list
+5. Test build
+
+"@
+        
+        Set-Content -Path "../FIREFOX_BRANDING_ANALYSIS.md" -Value $report
+        
+        Write-Host "`nReport saved to FIREFOX_BRANDING_ANALYSIS.md"
+    
+    - name: Upload branding analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: firefox-branding-analysis
+        path: |
+          FIREFOX_BRANDING_ANALYSIS.md
+          firefox-branding/browser/branding/official/
+        retention-days: 30
+    
+    - name: Commit analysis report
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add FIREFOX_BRANDING_ANALYSIS.md
+        git commit -m "Add Firefox branding analysis report" || echo "No changes to commit"
+        git push || echo "Nothing to push"

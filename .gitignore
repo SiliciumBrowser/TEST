@@ -8,6 +8,8 @@ chromium-prebuilt/
 
 # Firefox build artifacts
 firefox/
+firefox-branding-temp/
+firefox-branding-reference/
 build/
 obj-*/
 dist/
