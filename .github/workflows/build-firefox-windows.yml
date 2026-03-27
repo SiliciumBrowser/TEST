@@ -266,8 +266,6 @@ jobs:
         $config += "ac_add_options --disable-crashreporter`n"
         $config += "ac_add_options --disable-updater`n"
         $config += "ac_add_options --disable-maintenance-service`n`n"
-        $config += "# Security: Enable Wasm sandboxed libraries`n"
-        $config += "ac_add_options --with-wasm-sandboxed-libraries`n`n"
         $config += "# Features`n"
         $config += "ac_add_options --enable-release`n"
         
@@ -325,6 +323,22 @@ jobs:
         $env:CCACHE_DIR = "$env:USERPROFILE\.ccache"
         $env:CCACHE_MAXSIZE = "5G"
         $env:CCACHE_COMPRESS = "1"
+        
+        # Set WASI_SYSROOT for Wasm sandboxed libraries
+        $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" -Path ".." | Select-Object -First 1
+        if ($wasiDir) {
+          $env:WASI_SYSROOT = "$($wasiDir.FullName)\share\wasi-sysroot"
+          Write-Host "WASI_SYSROOT set to: $env:WASI_SYSROOT"
+          
+          # Add Wasm sandboxed libraries option to mozconfig
+          Add-Content -Path "mozconfig" -Value "`n# Security: Enable Wasm sandboxed libraries"
+          Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=$env:WASI_SYSROOT"
+        } else {
+          Write-Host "WARNING: wasi-sdk not found, building without Wasm sandboxed libraries"
+        }
+        
+        Write-Host "`nFinal mozconfig content:"
+        Get-Content mozconfig
         
         # Run mach build
         python3 mach build
