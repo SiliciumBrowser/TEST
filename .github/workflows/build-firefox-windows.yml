@@ -327,12 +327,15 @@ jobs:
         # Set WASI_SYSROOT for Wasm sandboxed libraries
         $wasiDir = Get-ChildItem -Directory -Filter "wasi-sdk-*" -Path ".." | Select-Object -First 1
         if ($wasiDir) {
-          $env:WASI_SYSROOT = "$($wasiDir.FullName)\share\wasi-sysroot"
+          $wasiSysroot = Join-Path $wasiDir.FullName "share\wasi-sysroot"
+          $env:WASI_SYSROOT = $wasiSysroot
           Write-Host "WASI_SYSROOT set to: $env:WASI_SYSROOT"
           
           # Add Wasm sandboxed libraries option to mozconfig
+          # Syntax: --with-wasm-sandboxed-libraries=lib1,lib2,lib3
           Add-Content -Path "mozconfig" -Value "`n# Security: Enable Wasm sandboxed libraries"
-          Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=$env:WASI_SYSROOT"
+          Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=graphite,ogg,hunspell,expat,woff2"
+          Add-Content -Path "mozconfig" -Value "mk_add_options 'export WASI_SYSROOT=$wasiSysroot'"
         } else {
           Write-Host "WARNING: wasi-sdk not found, building without Wasm sandboxed libraries"
         }
