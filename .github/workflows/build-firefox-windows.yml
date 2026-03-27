@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      save_cache:
+        description: 'Save cache after build'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -37,13 +42,23 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\mozilla-build" | Out-Null
         Write-Host "Cache directories created"
         
+        Write-Host "`n========================================" -ForegroundColor Cyan
+        Write-Host "CACHE CONFIGURATION" -ForegroundColor Cyan
+        Write-Host "========================================" -ForegroundColor Cyan
+        
         if ("${{ github.event.inputs.clear_cache }}" -eq "true") {
-          Write-Host "========================================" -ForegroundColor Yellow
-          Write-Host "CACHE CLEARED - Fresh build" -ForegroundColor Yellow
-          Write-Host "========================================" -ForegroundColor Yellow
+          Write-Host "Clear cache: YES - Fresh build (no restore)" -ForegroundColor Yellow
         } else {
-          Write-Host "Using cached build (if available)"
+          Write-Host "Clear cache: NO - Use cached build" -ForegroundColor Green
         }
+        
+        if ("${{ github.event.inputs.save_cache }}" -eq "false") {
+          Write-Host "Save cache: NO - Won't overwrite cache" -ForegroundColor Yellow
+        } else {
+          Write-Host "Save cache: YES - Will save/update cache" -ForegroundColor Green
+        }
+        
+        Write-Host "========================================`n" -ForegroundColor Cyan
     
     - name: Restore Mozilla Build dependencies cache
       if: ${{ github.event.inputs.clear_cache != 'true' }}
@@ -462,14 +477,14 @@ jobs:
         }
     
     - name: Save ccache
-      if: always()
+      if: ${{ always() && github.event.inputs.save_cache != 'false' }}
       uses: actions/cache/save@v4
       with:
         path: ~\.ccache
         key: ccache-${{ runner.os }}-${{ github.run_number }}
     
     - name: Save Mozilla Build dependencies cache
-      if: always()
+      if: ${{ always() && github.event.inputs.save_cache != 'false' }}
       uses: actions/cache/save@v4
       with:
         path: |
