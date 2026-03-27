@@ -336,16 +336,18 @@ jobs:
           $wasiClang = Join-Path $wasiPath "bin\clang.exe"
           $wasiClangxx = Join-Path $wasiPath "bin\clang++.exe"
           
+          # Set environment variables BEFORE configure runs
           $env:WASI_SYSROOT = $wasiSysroot
+          $env:CC_wasm32_wasi = $wasiClang
+          $env:CXX_wasm32_wasi = $wasiClangxx
+          
           Write-Host "WASI_SYSROOT set to: $env:WASI_SYSROOT"
+          Write-Host "CC_wasm32_wasi set to: $env:CC_wasm32_wasi"
+          Write-Host "CXX_wasm32_wasi set to: $env:CXX_wasm32_wasi"
           
           # Add Wasm sandboxed libraries option to mozconfig
-          # Use wasi-sdk compilers instead of system LLVM
           Add-Content -Path "mozconfig" -Value "`n# Security: Enable Wasm sandboxed libraries"
           Add-Content -Path "mozconfig" -Value "ac_add_options --with-wasm-sandboxed-libraries=graphite,ogg,hunspell,expat,woff2"
-          Add-Content -Path "mozconfig" -Value "mk_add_options 'export WASI_SYSROOT=$wasiSysroot'"
-          Add-Content -Path "mozconfig" -Value "mk_add_options 'export CC_wasm32_wasi=$wasiClang'"
-          Add-Content -Path "mozconfig" -Value "mk_add_options 'export CXX_wasm32_wasi=$wasiClangxx'"
           
           Write-Host "Wasm sandboxed libraries ENABLED with wasi-sdk compilers"
         } else {
