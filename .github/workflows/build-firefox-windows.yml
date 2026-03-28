@@ -291,6 +291,7 @@ jobs:
         } else {
           $config += "ac_add_options --enable-optimize`n"
           $config += "ac_add_options --disable-debug`n"
+          $config += "ac_add_options --disable-debug-symbols`n"
         }
         
         $config += "`n"
@@ -300,6 +301,10 @@ jobs:
         $config += "# Enable ccache for faster rebuilds`n"
         $config += "ac_add_options --with-ccache`n"
         $config += "mk_add_options 'export CCACHE_DIR=$env:USERPROFILE\.ccache'`n`n"
+        $config += "# Use lld linker for faster linking`n"
+        $config += "ac_add_options --enable-linker=lld`n`n"
+        $config += "# Parallel linking - use more jobs for linking`n"
+        $config += "mk_add_options MOZ_PARALLEL_LINK=4`n`n"
         $config += "# Silicium custom branding`n"
         $config += "ac_add_options --with-branding=browser/branding/silicium`n"
         $config += "ac_add_options --with-app-name=silicium`n`n"
@@ -367,6 +372,10 @@ jobs:
         $env:CCACHE_DIR = "$env:USERPROFILE\.ccache"
         $env:CCACHE_MAXSIZE = "5G"
         $env:CCACHE_COMPRESS = "1"
+        
+        # Rust optimization for faster linking
+        $env:CARGO_PROFILE_RELEASE_LTO = "thin"
+        $env:CARGO_PROFILE_RELEASE_CODEGEN_UNITS = "16"
         
         # TEMPORARILY DISABLE Wasm sandboxed libraries
         # Issue: Firefox configure runs before we can set environment variables
