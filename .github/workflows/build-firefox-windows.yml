@@ -155,6 +155,28 @@ jobs:
         cd firefox
         C:\mozilla-build\start-shell.bat -c "python3 ./mach bootstrap --application-choice=browser --no-interactive"
     
+    - name: Install mold linker
+      shell: powershell
+      run: |
+        Write-Host "Installing mold linker for faster linking..."
+        
+        $moldVersion = "2.40.4"
+        $moldUrl = "https://github.com/rui314/mold/releases/download/v$moldVersion/mold-$moldVersion-x86_64-windows.zip"
+        $moldZip = "mold.zip"
+        
+        Write-Host "Downloading mold v$moldVersion..."
+        Invoke-WebRequest -Uri $moldUrl -OutFile $moldZip -UseBasicParsing
+        
+        Write-Host "Extracting mold..."
+        Expand-Archive -Path $moldZip -DestinationPath "C:\mold" -Force
+        
+        # Add mold to PATH
+        $moldPath = "C:\mold\mold-$moldVersion-x86_64-windows\bin"
+        echo "$moldPath" >> $env:GITHUB_PATH
+        
+        Write-Host "mold installed successfully!"
+        Write-Host "mold path: $moldPath"
+    
     - name: Install cbindgen
       shell: powershell
       run: |
@@ -301,8 +323,8 @@ jobs:
         $config += "# Enable ccache for faster rebuilds`n"
         $config += "ac_add_options --with-ccache`n"
         $config += "mk_add_options 'export CCACHE_DIR=$env:USERPROFILE\.ccache'`n`n"
-        $config += "# Use lld linker for faster linking`n"
-        $config += "ac_add_options --enable-linker=lld`n`n"
+        $config += "# Use mold linker for ultra-fast linking (10x faster than lld)`n"
+        $config += "ac_add_options --enable-linker=mold`n`n"
         $config += "# Parallel linking - use more jobs for linking`n"
         $config += "mk_add_options MOZ_PARALLEL_LINK=4`n`n"
         $config += "# Silicium custom branding`n"
