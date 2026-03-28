@@ -263,6 +263,9 @@ jobs:
         Copy-Item "custom-resources\icons\firefox.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\firefox64.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\document.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\document_pdf.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\newtab.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\newwindow.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\pbmode.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\VisualElements_150.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\VisualElements_70.png" "$brandingDir\" -Force

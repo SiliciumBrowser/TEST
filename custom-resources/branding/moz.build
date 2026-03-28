@@ -17,8 +17,11 @@ FINAL_TARGET_FILES.branding += [
     "default48.png",
     "default64.png",
     "document.ico",
+    "document_pdf.ico",
     "firefox.ico",
     "firefox64.ico",
+    "newtab.ico",
+    "newwindow.ico",
     "pbmode.ico",
 ]
 
