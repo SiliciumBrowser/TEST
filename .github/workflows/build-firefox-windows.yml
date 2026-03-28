@@ -238,6 +238,7 @@ jobs:
         Copy-Item "custom-resources\branding\branding.nsi" "$brandingDir\" -Force
         Copy-Item "custom-resources\branding\moz.build" "$brandingDir\" -Force
         Copy-Item "custom-resources\branding\firefox.VisualElementsManifest.xml" "$brandingDir\" -Force
+        Copy-Item "custom-resources\branding\private_browsing.VisualElementsManifest.xml" "$brandingDir\" -Force
         
         # Verify configure.sh content
         Write-Host "`nVerifying configure.sh content:"
@@ -262,8 +263,11 @@ jobs:
         Copy-Item "custom-resources\icons\firefox.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\firefox64.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\document.ico" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\pbmode.ico" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\VisualElements_150.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\VisualElements_70.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\PrivateBrowsing_150.png" "$brandingDir\" -Force
+        Copy-Item "custom-resources\icons\PrivateBrowsing_70.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\about.png" "$brandingDir\content\" -Force
         
         Write-Host "Silicium branding setup complete!"
