@@ -1,0 +1,122 @@
+# Silicium Browser - Default Preferences
+# Based on BetterFox and Zen Browser configurations
+
+# PERFORMANCE
+- name: gfx.canvas.accelerated.cache-size
+  value: 256
+
+- name: gfx.webrender.enabled
+  value: true
+
+- name: gfx.webrender.all
+  value: true
+
+- name: browser.cache.memory.capacity
+  value: 262144
+
+# PRIVACY & SECURITY
+- name: browser.contentblocking.category
+  value: strict
+
+- name: privacy.trackingprotection.enabled
+  value: true
+
+- name: privacy.trackingprotection.socialtracking.enabled
+  value: true
+
+- name: privacy.globalprivacycontrol.enabled
+  value: true
+
+- name: dom.security.https_only_mode
+  value: true
+
+- name: browser.cache.disk.enable
+  value: false
+
+- name: privacy.sanitize.sanitizeOnShutdown
+  value: false
+
+- name: privacy.clearOnShutdown.cache
+  value: false
+
+- name: privacy.clearOnShutdown.cookies
+  value: false
+
+# TELEMETRY - DISABLE ALL
+- name: toolkit.telemetry.enabled
+  value: false
+
+- name: toolkit.telemetry.archive.enabled
+  value: false
+
+- name: datareporting.policy.dataSubmissionEnabled
+  value: false
+
+- name: datareporting.healthreport.uploadEnabled
+  value: false
+
+# MOZILLA ANNOYANCES
+- name: extensions.pocket.enabled
+  value: false
+
+- name: browser.startup.homepage_override.mstone
+  value: ignore
+
+- name: browser.uitour.enabled
+  value: false
+
+# SEARCH & URL BAR
+- name: browser.urlbar.trimHttps
+  value: true
+
+- name: browser.search.suggest.enabled
+  value: false
+
+- name: browser.urlbar.quicksuggest.enabled
+  value: false
+
+- name: browser.formfill.enable
+  value: false
+
+# SPECULATIVE LOADING - PRIVACY
+- name: network.http.speculative-parallel-limit
+  value: 0
+
+- name: network.dns.disablePrefetch
+  value: true
+
+- name: network.prefetch-next
+  value: false
+
+# WEBRTC PRIVACY
+- name: media.peerconnection.ice.default_address_only
+  value: true
+
+# FINGERPRINTING
+- name: privacy.resistFingerprinting
+  value: false
+
+# CONTAINERS
+- name: privacy.userContext.ui.enabled
+  value: true
+
+# PDF SECURITY
+- name: pdfjs.enableScripting
+  value: false
+
+# SAFE BROWSING
+- name: browser.safebrowsing.downloads.remote.enabled
+  value: false
+
+- name: browser.safebrowsing.malware.enabled
+  value: true
+
+- name: browser.safebrowsing.phishing.enabled
+  value: true
+
+# SILICIUM BRANDING
+- name: browser.startup.homepage
+  value: about:blank
+
+- name: browser.newtab.preload
+  value: false
