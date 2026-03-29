@@ -253,7 +253,8 @@ jobs:
         # Copy content files
         Write-Host "Copying content files..."
         Copy-Item "custom-resources\branding\content\moz.build" "$brandingDir\content\" -Force
-        Copy-Item "custom-resources\branding\content\about.png" "$brandingDir\content\" -Force
+        Copy-Item "custom-resources\branding\content\*.png" "$brandingDir\content\" -Force
+        Copy-Item "custom-resources\branding\content\*.svg" "$brandingDir\content\" -Force
         
         # Copy icons
         Write-Host "Copying icons..."
