@@ -250,6 +250,11 @@ jobs:
         Copy-Item "custom-resources\branding\locales\en-US\*" "$brandingDir\locales\en-US\" -Force
         Copy-Item "custom-resources\branding\locales\vi\*" "$brandingDir\locales\vi\" -Force
         
+        # Copy content files
+        Write-Host "Copying content files..."
+        Copy-Item "custom-resources\branding\content\moz.build" "$brandingDir\content\" -Force
+        Copy-Item "custom-resources\branding\content\about.png" "$brandingDir\content\" -Force
+        
         # Copy icons
         Write-Host "Copying icons..."
         Copy-Item "custom-resources\icons\default16.png" "$brandingDir\" -Force
@@ -271,7 +276,6 @@ jobs:
         Copy-Item "custom-resources\icons\VisualElements_70.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\PrivateBrowsing_150.png" "$brandingDir\" -Force
         Copy-Item "custom-resources\icons\PrivateBrowsing_70.png" "$brandingDir\" -Force
-        Copy-Item "custom-resources\icons\about.png" "$brandingDir\content\" -Force
         
         Write-Host "Silicium branding setup complete!"
         Write-Host "Branding location: $brandingDir"
